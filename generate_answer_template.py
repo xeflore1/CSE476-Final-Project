@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Generate a placeholder answer file that matches the expected auto-grader format.
+""" Generate a placeholder answer file that matches the expected auto-grader format.
 
 Replace the placeholder logic inside `build_answers()` with your own agent loop
 before submitting so the ``output`` fields contain your real predictions.
@@ -8,10 +7,10 @@ before submitting so the ``output`` fields contain your real predictions.
 Reads the input questions from cse_476_final_project_test_data.json and writes
 an answers JSON file where each entry contains a string under the "output" key.
 """
-
 from __future__ import annotations
 
-import json
+import json, import_ipynb
+import final_project
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -30,12 +29,20 @@ def load_questions(path: Path) -> List[Dict[str, Any]]:
 
 def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     answers = []
+    print("about to loop through questions and build answers")
     for idx, question in enumerate(questions, start=1):
         # Example: assume you have an agent loop that produces an answer string.
         # real_answer = agent_loop(question["input"])
         # answers.append({"output": real_answer})
-        placeholder_answer = f"Placeholder answer for question {idx}"
-        answers.append({"output": placeholder_answer})
+
+        print(f"idx: {idx}, question: {question['input']}")
+        result = final_project.chain_of_thought(question)
+        print("OK:", result["ok"], "HTTP:", result["status"])
+        print("MODEL SAYS:", (result["text"] or "").strip())
+        # placeholder_answer = f"Placeholder answer for question {idx}"
+        # answers.append({"output": result["text"] or ""})
+
+        # - 
     return answers
 
 
@@ -61,6 +68,8 @@ def validate_results(
 
 
 def main() -> None:
+    # print("about to call helloworld()")
+    # final_project.helloworld()
     questions = load_questions(INPUT_PATH)
     answers = build_answers(questions)
 
