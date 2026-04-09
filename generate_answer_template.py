@@ -9,14 +9,19 @@ an answers JSON file where each entry contains a string under the "output" key.
 """
 from __future__ import annotations
 
-import json, import_ipynb
-import final_project
+import json
+import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+# Load .env
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
 
-INPUT_PATH = Path("cse_476_final_project_test_data.json")
-OUTPUT_PATH = Path("cse_476_final_project_answers.json")
+import finalProject as final_project
+
+INPUT_PATH = Path(__file__).parent / "personal_inputs.json"
+OUTPUT_PATH = Path(__file__).parent / "cse_476_final_project_answers.json"
 
 
 def load_questions(path: Path) -> List[Dict[str, Any]]:
@@ -35,14 +40,12 @@ def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         # real_answer = agent_loop(question["input"])
         # answers.append({"output": real_answer})
 
-        print(f"idx: {idx}, question: {question['input']}")
-        result = final_project.chain_of_thought(question)
+        # call chain of thought
+        print(f"***** idx: {idx}, question: {question['input']} *****\n")
+        result = final_project.chain_of_thought(question["input"])
         print("OK:", result["ok"], "HTTP:", result["status"])
         print("MODEL SAYS:", (result["text"] or "").strip())
-        # placeholder_answer = f"Placeholder answer for question {idx}"
-        # answers.append({"output": result["text"] or ""})
-
-        # - 
+        answers.append({"output": result["text"] or ""})
     return answers
 
 
@@ -54,13 +57,14 @@ def validate_results(
             f"Mismatched lengths: {len(questions)} questions vs {len(answers)} answers."
         )
     for idx, answer in enumerate(answers):
+        # call extract answer
         if "output" not in answer:
             raise ValueError(f"Missing 'output' field for answer index {idx}.")
         if not isinstance(answer["output"], str):
             raise TypeError(
                 f"Answer at index {idx} has non-string output: {type(answer['output'])}"
             )
-        if len(answer["output"]) >= 5000:
+        if len(answer["output"]) >= 50000: # changed from 5000
             raise ValueError(
                 f"Answer at index {idx} exceeds 5000 characters "
                 f"({len(answer['output'])} chars). Please make sure your answer does not include any intermediate results."
@@ -68,8 +72,6 @@ def validate_results(
 
 
 def main() -> None:
-    # print("about to call helloworld()")
-    # final_project.helloworld()
     questions = load_questions(INPUT_PATH)
     answers = build_answers(questions)
 
