@@ -41,11 +41,20 @@ def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         # answers.append({"output": real_answer})
 
         # call chain of thought
+        # print(f"***** idx: {idx}, question: {question['input']} *****\n")
+        # result = final_project.chain_of_thought(question["input"])
+        # print("OK:", result["ok"], "HTTP:", result["status"])
+        # print("MODEL SAYS:", (result["text"] or "").strip())
+        # answers.append({"output": result["text"] or ""})
+
+        # call self-consistency
         print(f"***** idx: {idx}, question: {question['input']} *****\n")
-        result = final_project.chain_of_thought(question["input"])
-        print("OK:", result["ok"], "HTTP:", result["status"])
-        print("MODEL SAYS:", (result["text"] or "").strip())
-        answers.append({"output": result["text"] or ""})
+        result = final_project.self_consistency(question["input"])
+        print(f"***** result: {result} *****\n")
+        # print("OK:", result["ok"], "HTTP:", result["status"])
+        # print("MODEL SAYS:", (result["text"] or "").strip())
+        answers.append({"output": result})
+
     return answers
 
 
@@ -74,7 +83,11 @@ def validate_results(
 def main() -> None:
     questions = load_questions(INPUT_PATH)
     answers = build_answers(questions)
+    print(f"***** answers: {answers} *****\n")
 
+    # str = "Wait — but let me check one more thing.\n\nSuppose $ t = 328 $, $ w = 164 $: ratio after = $ 167/332 $\n\nCompute $ 167 \\div 332 $:\n\n$$\n332 \\times 0.503 = 332 \\times 0.5 + 332 \\times 0.003 = 166 + 0.996 = 166.996\n$$\n\n$ 167 > 166.996 $, so yes, $ 167/332 > 0.503 $\n\nNow, what about $ t = 328 $, $ w = 164 $: yes\n\nBut is there a **larger** $ w $? Only if $ t > 328 $, even.\n\nNext even is 330: fails.\n\nSo no.\n\nThus, the largest number of matches she could have won before the weekend is $ \\boxed{164} $\n\nFinal Answer: this is the ans"
+    # res = final_project.extract_answer(str)
+    # print(res)
     with OUTPUT_PATH.open("w") as fp:
         json.dump(answers, fp, ensure_ascii=False, indent=2)
 
