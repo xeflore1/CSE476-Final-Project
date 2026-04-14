@@ -9,24 +9,23 @@ API_KEY  = os.getenv('API-KEY')
 API_BASE = os.getenv("API_BASE", "https://openai.rc.asu.edu/v1")
 MODEL    = os.getenv("MODEL_NAME", "qwen3-30b-a3b-instruct-2507")
 
-
-def helloworld():
-    print("Hello, world!")
-
-def extract_answer(text: str) -> str:
-    # Helper to pull the final answer from the CoT text.
-    print(f"extracting answer from: {text}")
+def extract_answer(text: str) -> str: # Helper function to extract answer from a models responce.
     if not text:
         return None
-    # retrieves answer from the end of the response
-    match = re.search(r"Final Answer:\s*(.*)", text, flags=re.IGNORECASE | re.DOTALL)
+    # Extract answer from the format: \\boxed{answer}
+    match = re.search(r"\\boxed\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}", text)
     if match:
-        return match.group(1).strip().strip('.')
-    return None
+        return match.group(1).strip()
+    else:
+        return None
 
 # Chain of thought algorithm
 def chain_of_thought(prompt: str,
-                     system: str = "You are a logical assistant. Think step-by-step and explain your reasoning clearly before answering.", # You should provide the final answer in the format: \n\nFinal Answer: [answer]\n\n",
+                     system: str = 
+                        "You are a logical assistant. Think step-by-step and explain your reasoning clearly before answering." 
+                        "Your final answer MUST end with this exact format:\n"
+                        "\\boxed{answer}\n"
+                        "<DONE>",
                      model: str = MODEL,
                      temperature: float = 0.3,
                      timeout: int = 120) -> dict:
@@ -72,49 +71,34 @@ def chain_of_thought(prompt: str,
     except requests.RequestException as e:
         return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
 
-
+# Self-consistency algorithm
 def self_consistency(prompt: str,
                      system: str = (
-                        "You are a logical assistant. First, think step-by-step and explain your reasoning clearly. "
-                        "Once you have completed your reasoning, you MUST output your final answer strictly using the following format:\n\n"
-                        "Final Answer:\n"
-                        "[Your final answer goes here]\n"
+                        "You are a logical assistant. Think step-by-step and answer the given question."
+                        "Your final answer MUST end with this exact format:\n"
+                        "\\boxed{answer}\n"
                         "<DONE>"
                     ),
                      model: str = MODEL,
                      temperature: float = 0.5, # increase temp so that model explores different logical approaches
                      timeout: int = 120) -> dict:
-    """
-    Calls an OpenAI-style /v1/chat/completions endpoint and returns:
-    { 'ok': bool, 'text': str or None, 'raw': dict or None, 'status': int, 'error': str or None, 'headers': dict }
-    """
-    url = f"{API_BASE}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type":  "application/json",
-    }
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user",   "content": prompt}
-        ],
-        "temperature": temperature,
-        "max_tokens": 2048,
-    }
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {executor.submit(chain_of_thought, prompt, system, model, temperature, timeout) for i in range(3)}
+    # Run chain of thought 4 times and pick the most frequent answer
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {executor.submit(chain_of_thought, prompt, system, model, temperature, timeout) for i in range(4)}
         responses = []
         for future in concurrent.futures.as_completed(futures):
             response = future.result()
             if response["ok"]:
                 answer = extract_answer(response["text"])
                 responses.append(answer)
-        print(f"Responses: {responses}")
-        counts = Counter(responses)
-        most_common_val = counts.most_common(1)[0][0]
-        return most_common_val
+        filteredList = [x for x in responses if x is not None] # get rid of None entries
+        if not filteredList:
+            return None
+        else:
+            counts = Counter(filteredList)
+            most_common_val = counts.most_common(1)[0][0] # find the most common answer
+            return most_common_val # return the most common answer
                 
 
 def decomposition(prompt: str,
