@@ -102,14 +102,30 @@ def self_consistency(prompt: str,
                 
 
 def decomposition(prompt: str,
-                   system: str = "You are a helpful assistant. Give the answer to the provided question, but make sure to include all of the logical reasoning steps that you took to arrive at the final answer first.",
+                   system: str = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem. The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]",
                    model: str = MODEL,
-                   temperature: float = 0.0,
+                   temperature: float = 0.15,
                    timeout: int = 60) -> dict:
     """
     Calls an OpenAI-style /v1/chat/completions endpoint and returns:
     { 'ok': bool, 'text': str or None, 'raw': dict or None, 'status': int, 'error': str or None, 'headers': dict }
     """
+    url = f"{API_BASE}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type":  "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user",   "content": prompt}
+        ],
+        "temperature": temperature,
+        "max_tokens": 2048,
+    }
+
+def calling_api(prompt: str, system: str, model: str, temperature: float, timeout: int):
     url = f"{API_BASE}/chat/completions"
     headers = {
         "Authorization": f"Bearer {API_KEY}",
