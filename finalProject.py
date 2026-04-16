@@ -105,16 +105,28 @@ def decomposition(prompt: str,
                    system: str = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem.\n Each subproblem must be independent of each other (can be solved parallelly) and easy-to-merge with other solutions.\n The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]",
                    model: str = MODEL,
                    temperature: float = 0.15,
-                   timeout: int = 60) -> dict:
+                   timeout: int = 100):
     """
     Calls an OpenAI-style /v1/chat/completions endpoint and returns:
     { 'ok': bool, 'text': str or None, 'raw': dict or None, 'status': int, 'error': str or None, 'headers': dict }
     """
     max_tokens = 300
-    url, headers, payload, timeout = calling_api(prompt, system, model, temperature, timeout, max_tokens)
-    first_response = requests.post(url, headers=headers, json=payload, timeout=timeout)
-    status = first_response.status_code
-    hdrs   = dict(first_response.headers)
+    first_response = calling_api(prompt, system, model, temperature, timeout, max_tokens)
+    #first_response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+    #status = first_response.status_code
+    #hdrs   = dict(first_response.headers)
+    #with concurrent.futures.ThreadPoolExecutor(max_workers = 3):
+    #return first_response
+    subproblem_list = list(first_response["text"])
+    system = "You are a logical assistant. Think step-by-step and answer the given question"
+    max_tokens = 400
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
+        futures = {threads.submit(calling_api, subproblem, system, model, temperature, timeout, max_tokens) for subproblem in subproblem_list}
+        subproblem_response = ""
+        for i in concurrent.futures.as_completed(futures):
+            subproblem_response = subproblem_response + i + "\n"
+        try:
+            
 
 
 
@@ -133,4 +145,22 @@ def calling_api(prompt: str, system: str, model: str, temperature: float, timeou
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
-    return url, headers, payload, timeout
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        status = resp.status_code
+        hdrs   = dict(resp.headers)
+        if status == 200:
+            print("200 returned")
+            data = resp.json()
+            text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            return {"ok": True, "text": text, "raw": data, "status": status, "error": None, "headers": hdrs}
+        else:
+            print("200 is NOT returned")
+            err_text = None
+            try:
+                err_text = resp.json()
+            except Exception:
+                err_text = resp.text
+            return {"ok": False, "text": None, "raw": None, "status": status, "error": str(err_text), "headers": hdrs}
+    except requests.RequestException as e:
+        return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}

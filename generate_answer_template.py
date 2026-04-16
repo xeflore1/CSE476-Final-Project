@@ -48,9 +48,12 @@ def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         # answers.append({"output": result["text"] or ""})
 
         # call self-consistency
+        #print(f"***** idx: {idx}, question: {question['input']} *****\n")
+        #result = final_project.self_consistency(question["input"])
+        #print(f"***** result: {result} *****\n")
         print(f"***** idx: {idx}, question: {question['input']} *****\n")
-        result = final_project.self_consistency(question["input"])
-        print(f"***** result: {result} *****\n")
+        result = final_project.decomposition(prompt = question["input"])
+        print(f"***** result: {result["text"]} *****\n")
         # print("OK:", result["ok"], "HTTP:", result["status"])
         # print("MODEL SAYS:", (result["text"] or "").strip())
         answers.append({"output": result})
