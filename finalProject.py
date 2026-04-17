@@ -3,6 +3,7 @@ import requests
 import concurrent.futures
 from collections import Counter
 from dotenv import load_dotenv
+import ast
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')
@@ -117,16 +118,26 @@ def decomposition(prompt: str,
     #hdrs   = dict(first_response.headers)
     #with concurrent.futures.ThreadPoolExecutor(max_workers = 3):
     #return first_response
-    subproblem_list = list(first_response["text"])
-    system = "You are a logical assistant. Think step-by-step and answer the given question"
+    subproblem_list = ast.literal_eval(first_response["text"])
+    new_system = "You are a logical assistant. Think step-by-step and answer the given question"
     max_tokens = 400
+    print(subproblem_list)
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-        futures = {threads.submit(calling_api, subproblem, system, model, temperature, timeout, max_tokens) for subproblem in subproblem_list}
+        futures = {threads.submit(calling_api, subproblem, new_system, model, temperature, timeout, max_tokens) for subproblem in subproblem_list}
         subproblem_response = ""
         for i in concurrent.futures.as_completed(futures):
-            subproblem_response = subproblem_response + i + "\n"
-        try:
-            
+            try:
+                subproblem_response = subproblem_response + i.result()["text"] + "\n"
+
+            except Exception as error:
+                print("Exception:", error)
+    final_prompt = "Question: " + prompt + "\n" + "The following 3 answers are the answers to each subproblem:\n" + subproblem_response + "\n\nCombine all of these sub-solutions into a final solution to the question\n" + "Your final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>"
+    max_tokens = 1500
+    last_response = calling_api(final_prompt, new_system, model, temperature, timeout, max_tokens)
+    return extract_answer(last_response["text"])
+
+    
+
 
 
 
