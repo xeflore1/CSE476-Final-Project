@@ -103,7 +103,7 @@ def self_consistency(prompt: str,
                 
 
 def decomposition(prompt: str,
-                   system: str = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem.\n Each subproblem must be independent of each other (can be solved parallelly) and easy-to-merge with other solutions.\n The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]",
+                   system: str = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem.\n You must answer in UTF-8.\n Each subproblem must be independent of each other (can be solved parallelly) and easy-to-merge with other solutions.\n The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]",
                    model: str = MODEL,
                    temperature: float = 0.15,
                    timeout: int = 100):
@@ -119,7 +119,7 @@ def decomposition(prompt: str,
     #with concurrent.futures.ThreadPoolExecutor(max_workers = 3):
     #return first_response
     subproblem_list = ast.literal_eval(first_response["text"])
-    new_system = "You are a logical assistant. Think step-by-step and answer the given question"
+    new_system = "You are a logical assistant. Think step-by-step and answer the given question. You must answer in UTF-8"
     max_tokens = 400
     print(subproblem_list)
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
@@ -132,7 +132,7 @@ def decomposition(prompt: str,
             except Exception as error:
                 print("Exception:", error)
     final_prompt = "Question: " + prompt + "\n" + "The following 3 answers are the answers to each subproblem:\n" + subproblem_response + "\n\nCombine all of these sub-solutions into a final solution to the question\n" + "Your final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>"
-    max_tokens = 1500
+    max_tokens = 2000
     last_response = calling_api(final_prompt, new_system, model, temperature, timeout, max_tokens)
     return extract_answer(last_response["text"])
 

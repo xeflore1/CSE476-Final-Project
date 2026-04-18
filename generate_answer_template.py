@@ -13,6 +13,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
+import ast
 
 # Load .env
 from dotenv import load_dotenv
@@ -25,10 +26,11 @@ OUTPUT_PATH = Path(__file__).parent / "cse_476_final_project_answers.json"
 
 
 def load_questions(path: Path) -> List[Dict[str, Any]]:
-    with path.open("r") as fp:
+    with path.open("r", encoding='utf-8') as fp:
         data = json.load(fp)
     if not isinstance(data, list):
         raise ValueError("Input file must contain a list of question objects.")
+    print("Data:", data)
     return data
 
 
@@ -51,9 +53,11 @@ def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         #print(f"***** idx: {idx}, question: {question['input']} *****\n")
         #result = final_project.self_consistency(question["input"])
         #print(f"***** result: {result} *****\n")
+        print("Hello World")
         print(f"***** idx: {idx}, question: {question['input']} *****\n")
+        
         result = final_project.decomposition(prompt = question["input"])
-        print(f"***** result: {result["text"]} *****\n")
+        print(f"***** result: {result} *****\n")
         # print("OK:", result["ok"], "HTTP:", result["status"])
         # print("MODEL SAYS:", (result["text"] or "").strip())
         answers.append({"output": result})
