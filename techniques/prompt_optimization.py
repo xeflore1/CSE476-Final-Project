@@ -1,29 +1,25 @@
-import os
-from dotenv import load_dotenv
-load_dotenv(Path(__file__).parent / ".env")
 from __future__ import annotations
-import json
-import sys
+
 from pathlib import Path
-from typing import Any, Dict, List
+
+import requests
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent / ".env")
 import finalProject as final_project
 
 # This technique is going to be used with simple to medium questions. Especially for common sense questions.
 # There will be domain specific prompts for each domain with few shot examples.
-def prompt_optimization_call(prompt, domain, model, temperature, max_tokens, timeout) -> dict:
+def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeout) -> dict:
 
    ## Calls the LLM endpoint with the prompt optimization prompt.
 
     print(f"Prompt optimization is running with prompt: {prompt}\n")
-    url = f"{API_BASE}/chat/completions"
+    url = f"{final_project.API_BASE}/chat/completions"
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "Authorization": f"Bearer {final_project.API_KEY}",
         "Content-Type":  "application/json",
     }
-    payload = {}
-
-
-
 
     def math_guidlines():
         return """
@@ -127,3 +123,43 @@ def prompt_optimization_call(prompt, domain, model, temperature, max_tokens, tim
         As initial conditions I have that, the red block is clear, the blue block is clear, the hand is empty, the red block is on top of the orange block, the blue block is on top of the yellow block, the orange block is on the table and the yellow block is on the table.\nMy goal is to have that the red block is on top of the orange block and the blue block is on top of the red block.\n\nMy plan is as follows:\n\n[PLAN]",
         "Answer": "(unstack blue yellow)\n(stack blue red)\n"
         """
+
+    domain_prompts = {
+        "math": math_guidlines,
+        "common_sense": common_sense_guidlines,
+        "coding": coding_guidlines,
+        "future_prediction": future_prediction_guidlines,
+        "planning": planning_guidlines,
+    }
+    guide_fn = domain_prompts.get(domain, common_sense_guidlines)
+    system_content = guide_fn().strip()
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_content},
+            {"role": "user",   "content": prompt},
+        ],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "frequency_penalty": 0.0,
+    }
+
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        status = resp.status_code
+        hdrs   = dict(resp.headers)
+        if status == 200:
+            print("200 returned")
+            data = resp.json()
+            text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            return {"ok": True, "text": text, "raw": data, "status": status, "error": None, "headers": hdrs}
+        else:
+            print("200 is NOT returned")
+            err_text = None
+            try:
+                err_text = resp.json()
+            except Exception:
+                err_text = resp.text
+            return {"ok": False, "text": None, "raw": None, "status": status, "error": str(err_text), "headers": hdrs}
+    except requests.RequestException as e:
+        return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
