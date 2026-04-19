@@ -48,13 +48,22 @@ def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         # answers.append({"output": result["text"] or ""})
 
         # call self-consistency
-        print(f"***** idx: {idx}, question: {question['input']} *****\n")
-        result = final_project.self_consistency(question["input"])
-        print(f"***** result: {result} *****\n")
+    #    print(f"***** idx: {idx}, question: {question['input']} *****\n")
+    #    result = final_project.self_consistency(question["input"])
+    #    print(f"***** result: {result} *****\n")
         # print("OK:", result["ok"], "HTTP:", result["status"])
         # print("MODEL SAYS:", (result["text"] or "").strip())
-        answers.append({"output": result})
+    #    answers.append({"output": result})
 
+        # call tool-augmented reasoning
+        print(f"***** idx: {idx}, question: {question['input']} *****\n")
+
+        result = final_project.tool_augmented_reasoning(question["input"])
+
+        print(f"***** result: {result} *****\n")
+
+        # ALWAYS return string (this is important)
+        answers.append({"output": result.get("text") or "ERROR"})
     return answers
 
 
