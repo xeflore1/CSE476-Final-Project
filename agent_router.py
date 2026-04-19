@@ -11,9 +11,71 @@ from techniques.ensemble_voting import ensemble_vote
 from techniques.prompt_optimization import prompt_optimized_call
 from techniques.llm_as_judge import confidence_check
 
+import finalProject as final_project
 
-# Routing function is a function that routes the question to the appropriate technique.
-def routing_function(question, domain):
+_TOK = {"math": 256, "common_sense": 256, "coding": 1024, "future_prediction": 256, "planning": 512}
+
+_LLM_ESTIMATE = {
+    "prompt_optimized_call": 1,
+    "chain_of_thought": 1,
+    "self_consistency": 4,
+    "tree_of_thought": 8,
+    "self_refine": 3,
+    "react": 4,
+    "tool_augmented": 3,
+    "decomposition": 5,
+    "ensemble_vote": 6,
+}
+
+
+class QuestionLLMBudget:
+    __slots__ = ("used", "limit")
+
+    def __init__(self, limit=18):
+        self.used = 0
+        self.limit = limit
+
+    def remaining(self) -> int:
+        return max(0, self.limit - self.used)
+
+
+def estimate_technique_llm_calls(technique) -> int:
+    return _LLM_ESTIMATE.get(getattr(technique, "__name__", ""), 1)
+
+
+def track_llm_calls(budget: QuestionLLMBudget, technique) -> bool:
+    n = estimate_technique_llm_calls(technique)
+    if budget.used + n > budget.limit:
+        return False
+    budget.used += n
+    return True
+
+
+def _normalize_raw(res):
+    if isinstance(res, dict):
+        if not res.get("ok"):
+            return ""
+        t = res.get("text")
+        return t if t is not None else ""
+    if res is None:
+        return ""
+    return str(res)
+
+
+def _invoke(technique, question_text, domain):
+    if getattr(technique, "__name__", "") == "prompt_optimized_call":
+        return prompt_optimized_call(
+            question_text,
+            domain,
+            final_project.MODEL,
+            0.0,
+            _TOK.get(domain, 256),
+            180,
+        )
+    return technique(question_text)
+
+
+def route_question(question_text, domain, budget=None):
     techniques = []
     if domain == "math":
         techniques.append(chain_of_thought)
@@ -24,32 +86,25 @@ def routing_function(question, domain):
         techniques.append(react)
         techniques.append(tool_augmented)
     elif domain == "future_prediction":
-        techniques.append(chain_of_thought)
-        techniques.append(self_consistency)
+        techniques.append(prompt_optimized_call)
     elif domain == "planning":
         techniques.append(decomposition)
-    return techniques
+    if budget is None:
+        return techniques
+    rem = budget.remaining()
+    return [t for t in techniques if estimate_technique_llm_calls(t) <= rem]
 
-# Agent function is a function that routes the question to the appropriate technique and returns the answer.
-def agent(question) -> str:
-    domain = classify_domain(question)
-    techniques = routing_function(question, domain)
+
+def agent(question_text) -> str:
+    domain = classify_domain(question_text)
+    budget = QuestionLLMBudget()
+    techniques = route_question(question_text, domain, budget)
     for technique in techniques:
-        answer = technique(question)
-        if answer is not None:
-            return answer
-    return "No answer found"
-
-def track_llm_calls(techniques):
-    for technique in techniques:
-        if technique.__name__ == "chain_of_thought":
-            return 1
-        elif technique.__name__ == "self_consistency":
-            return 1
-        elif technique.__name__ == "tree_of_thought":
-            return 1
-        elif technique.__name__ == "self_refine":
-            return 1
-        elif technique.__name__ == "react":
-            return 1
-
+        if not track_llm_calls(budget, technique):
+            continue
+        raw = _invoke(technique, question_text, domain)
+        text = _normalize_raw(raw)
+        out = extract_answer(text, domain)
+        if out:
+            return out
+    return ""
