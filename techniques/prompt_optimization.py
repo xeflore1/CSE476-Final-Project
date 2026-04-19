@@ -7,13 +7,10 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent / ".env")
 import finalProject as final_project
+from techniques.output_instructions import output_instructions
 
-# This technique is going to be used with simple to medium questions. Especially for common sense questions.
-# There will be domain specific prompts for each domain with few shot examples.
+
 def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeout) -> dict:
-
-   ## Calls the LLM endpoint with the prompt optimization prompt.
-
     print(f"Prompt optimization is running with prompt: {prompt}\n")
     url = f"{final_project.API_BASE}/chat/completions"
     headers = {
@@ -24,11 +21,6 @@ def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeou
     def math_guidlines():
         return """
         You are a math expert. You will be given a math problem and you need to solve it step by step.
-        You need to answer the question in the following format:
-        Double check your arithmetic and your answer is a number.
-        {
-            "answer": "answer",
-        }
         Here are a few examples:
         "problem": "Let $ABCD$ be a convex quadrilateral with $AB = CD = 10$ , $BC = 14$ , and $AD = 2\\sqrt{65}$ . Assume that the diagonals of $ABCD$ intersect at point $P$ , and that the sum of the areas of triangles $APB$ and $CPD$ equals the sum of the areas of triangles $BPC$ and $APD$ . Find the area of quadrilateral $ABCD$ .",
         "Answer": "112"
@@ -43,15 +35,11 @@ def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeou
 
     def common_sense_guidlines():
         return """
-        You are a common sense expert. You will be given a common sense question and you need to answer it concisely with fatual answer.
+        You are a common sense expert. You will be given a common sense question and you need to answer it concisely with factual answer.
         For multiple choice questions, you need to pick the correct answer from the options.
         For reading comprehension questions, you need to extract the answer from the passage.
         For questions with multiple answers, you need to list all the answers.
         For questions in a different language, you need to answer in the same language.
-        You need to answer the question in the following format:
-        {
-            "answer": "answer",
-        }
         Here are a few examples:
         "Problem": "The Oberoi family is part of a hotel company that has a head office in what city?",
         "Answer": "Delhi"
@@ -69,10 +57,6 @@ def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeou
         You are a coding expert. You will be given a coding problem and you need to only output the function body. Dont output full function definition.
         Dont add any comments or docstrings. Just the function body.
         The code should be complete and runnable.
-        You need to answer the question in the following format:
-        {
-            "answer": "answer",
-        }
 
         Here are a few examples:
         "Problem": "Create a dictionary in which keys are random letters and values are lists of random integers. The dictionary is then sorted by the mean of the values in descending order, demonstrating the use of the statistics library.\nThe function should output with:\n    dict: The sorted dictionary with letters as keys and lists of integers as values, sorted by their mean values.\nYou should write self-contained code starting with:\n```\nimport random\nimport statistics\ndef task_func(LETTERS):\n```",
@@ -91,10 +75,6 @@ def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeou
         return """
         You are a future prediction expert. You will be given a future prediction question and you need to answer it with your best prediction even if you are uncertain.
         It is okay to guess.        
-        You need to answer the question in the following format:
-        {
-            "answer": "\boxed{answer}",
-        }
 
         "Problem": "You are an agent that can predict future events. The event to be predicted: \"\u8bf7\u9884\u6d4b\u5317\u4eac\u65f6\u95f42025-07-25, \u519c\u4e1a\u519c\u6751\u90e8\u68c0\u6d4b\u7684\u5168\u56fd\u519c\u4ea7\u54c1\u6279\u53d1\u5e02\u573a\u7f8a\u8089\u5e73\u5747\u4ef7\u683c\u662f\u591a\u5c11\u5143/\u516c\u65a4\uff1f\"\n        IMPORTANT: Your final answer MUST end with this exact format:\n        \\boxed{YOUR_PREDICTION}\n        Do not use any other format. Do not refuse to make a prediction. Do not say \"I cannot predict the future.\" You must make a clear prediction based on the best data currently available, using the box format specified above.",
         "Answer": "\boxed{59.21}"
@@ -112,10 +92,6 @@ def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeou
         You are a planning expert. You will be given a planning question and you need to answer it in action sequence.
         Each action should be a single line.
         The action sequence should be a valid action sequence from the actions provided.
-        You need to answer the question in the following format:
-        {
-            "answer": "action1\naction2\naction3\n...",
-        }
 
         Here are a few examples:
         "Problem": "I am playing with a set of blocks where I need to arrange the blocks into stacks. Here are the actions I can do\n\nPick up a block\nUnstack a block from on top of another block\nPut down a block\nStack a block on top of another block\n\nI have the following restrictions on my actions:\nI can only pick up or unstack one block at a time.\nI can only pick up or unstack a block if my hand is empty.\nI can only pick up a block if the block is on the table and the block is clear. A block is clear if the block has no other blocks on top of it and if the block is not picked up.\n
@@ -132,7 +108,7 @@ def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeou
         "planning": planning_guidlines,
     }
     guide_fn = domain_prompts.get(domain, common_sense_guidlines)
-    system_content = guide_fn().strip()
+    system_content = (guide_fn().strip() + "\n\n" + output_instructions(domain)).strip()
     payload = {
         "model": model,
         "messages": [
