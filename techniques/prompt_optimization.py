@@ -11,6 +11,7 @@ from techniques.output_instructions import output_instructions
 
 
 def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeout) -> dict:
+
     print(f"Prompt optimization is running with prompt: {prompt}\n")
     url = f"{final_project.API_BASE}/chat/completions"
     headers = {
