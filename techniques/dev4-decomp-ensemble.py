@@ -24,7 +24,7 @@ def decomposition(prompt: str,
                    system: str = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem.\n You must answer in UTF-8.\n Each subproblem must be independent of each other (can be solved parallelly) and easy-to-merge with other solutions.\n The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]",
                    model: str = MODEL,
                    temperature: float = 0.15,
-                   timeout: int = 100):
+                   timeout: int = 180):
     """
     Calls an OpenAI-style /v1/chat/completions endpoint and returns:
     { 'ok': bool, 'text': str or None, 'raw': dict or None, 'status': int, 'error': str or None, 'headers': dict }
@@ -38,8 +38,8 @@ def decomposition(prompt: str,
     #return first_response
     subproblem_list = ast.literal_eval(first_response["text"])
     new_system = "You are a logical assistant. Think step-by-step and answer the given question. You must answer in UTF-8"
-    max_tokens = 400
-    print(subproblem_list)
+    max_tokens = 5000
+    #print(subproblem_list)
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
         futures = {threads.submit(calling_api, subproblem, new_system, model, temperature, timeout, max_tokens) for subproblem in subproblem_list}
         subproblem_response = ""
@@ -50,7 +50,7 @@ def decomposition(prompt: str,
             except Exception as error:
                 print("Exception:", error)
     final_prompt = "Question: " + prompt + "\n" + "The following 3 answers are the answers to each subproblem:\n" + subproblem_response + "\n\nCombine all of these sub-solutions into a final solution to the question\n" + "Your final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>"
-    max_tokens = 2000
+    max_tokens = 5000
     last_response = calling_api(final_prompt, new_system, model, temperature, timeout, max_tokens)
     return extract_answer(last_response["text"])
 
@@ -93,3 +93,19 @@ def calling_api(prompt: str, system: str, model: str, temperature: float, timeou
             return {"ok": False, "text": None, "raw": None, "status": status, "error": str(err_text), "headers": hdrs}
     except requests.RequestException as e:
         return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
+
+def ensemble_voting(prompt: str,
+                   system: str = "You are a logical assistant. Your job is to classify the problem into EXACTLY one of the following domains: math, common_sense, coding, future_prediction, or planning.\nYour final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>",
+                   model: str = MODEL,
+                   temperature: float = 0.15,
+                   timeout: int = 180):
+    # First have to find domain of problem
+    first_call = calling_api(prompt, system, model, temperature, timeout, max_tokens=500)
+    domain = extract_answer(first_call["text"])
+    answers_list = []
+    if domain == "math":
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
+            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
+            decomp_thread = threads.submit(decomposition, prompt, new_system, model, temperature, timeout, max_tokens)
+            tool_aug_thread = threads.submit(tool_augmented_reasoning, prompt, new_system, model, temperature, timeout, max_tokens)
+            
