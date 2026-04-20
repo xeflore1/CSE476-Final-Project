@@ -137,9 +137,9 @@ def ensemble_voting(prompt: str,
         
     elif domain == "coding":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            decomp_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
-            tool_aug_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
+            cot_thread = threads.submit(react_agent, prompt, new_system, model, temperature, timeout, max_tokens)
+            decomp_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
+            tool_aug_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
 
             answers_list.append(cot_thread)
             answers_list.append(decomp_thread)
@@ -154,7 +154,7 @@ def ensemble_voting(prompt: str,
     elif domain == "future_prediction":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
             cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            decomp_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
+            decomp_thread = threads.submit(self_consistency, prompt, new_system, model, temperature, timeout, max_tokens)
             tool_aug_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
 
             answers_list.append(cot_thread)
@@ -169,9 +169,9 @@ def ensemble_voting(prompt: str,
         
     elif domain == "planning":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            decomp_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
-            tool_aug_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
+            cot_thread = threads.submit(decomposition, prompt, new_system, model, temperature, timeout, max_tokens)
+            decomp_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
+            tool_aug_thread = threads.submit(tree_og_thought, prompt, new_system, model, temperature, timeout, max_tokens)
 
             answers_list.append(cot_thread)
             answers_list.append(decomp_thread)
