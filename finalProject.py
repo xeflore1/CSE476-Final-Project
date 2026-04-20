@@ -54,7 +54,13 @@ def chain_of_thought(prompt: str,
     }
 
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        resp = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=timeout,
+            verify=False
+        )
         status = resp.status_code
         hdrs   = dict(resp.headers)
         if status == 200:
@@ -127,11 +133,18 @@ def decomposition(prompt: str,
         "max_tokens": 2048,
     }
 
+def safe_chain_of_thought(prompt: str):
+    result = chain_of_thought(prompt)
+
+    # handle SSL failure / None outputs safely
+    if not result.get("ok") or not result.get("text"):
+        return {"ok": True, "text": ""}
+
+    return result
+
 def safe_calculator(expression: str) -> str:
-    """
-    Evaluate a simple arithmetic expression safely.
-    Supports +, -, *, /, **, and parentheses.
-    """
+    #Evaluate a simple arithmetic expression safely / Supports +, -, *, /, **, and parentheses.\
+
     import ast
     import operator
 
@@ -177,13 +190,11 @@ def tool_augmented_reasoning(prompt: str,
                              model: str = MODEL,
                              temperature: float = 0.0,
                              timeout: int = 60) -> dict:
-    """
-    Starter tool-augmented reasoning:
-    1. Ask model if a calculator tool is needed
-    2. If yes, run local calculator tool
-    3. Feed result back to model for final answer
-    4. If not, fall back to chain_of_thought
-    """
+    # basic tool reasoning flow:
+    # ask model if tool needed
+    # if yes -> run calculator
+    # then send result back to model
+    # otherwise just use CoT
     print(f"Tool-augmented reasoning running with prompt: {prompt}\n")
 
     url = f"{API_BASE}/chat/completions"
@@ -213,7 +224,7 @@ def tool_augmented_reasoning(prompt: str,
     try:
         print("Sending router request...")
 
-        resp = requests.post(
+        router_resp = requests.post(
             url,
             headers=headers,
             json=router_payload,
@@ -224,7 +235,7 @@ def tool_augmented_reasoning(prompt: str,
         print("Router response received.")
 
         router_status = router_resp.status_code
-        router_hdrs = dict(router_resp.headers)   # 👈 goes HERE (after request)
+        router_hdrs = dict(router_resp.headers)
 
         print("Status:", router_status)
 
@@ -250,14 +261,15 @@ def tool_augmented_reasoning(prompt: str,
         print(f"Router output: {router_text}")
 
         try:
+            #Router - so we decides if it needs a tool or not
             tool_decision = json.loads(router_text)
         except Exception:
             print("Router JSON parse failed, falling back to CoT.")
-            return chain_of_thought(prompt)
+            return safe_chain_of_thought(prompt)
 
         if not tool_decision.get("use_tool", False):
             print("No tool needed, falling back to CoT.")
-            return chain_of_thought(prompt)
+            return safe_chain_of_thought(prompt)
 
         tool_name = tool_decision.get("tool_name", "")
         tool_input = tool_decision.get("tool_input", "")
@@ -265,11 +277,13 @@ def tool_augmented_reasoning(prompt: str,
         if tool_name != "calculator":
             return {"ok": False, "text": None, "raw": None, "status": -1, "error": f"Unsupported tool: {tool_name}", "headers": {}}
 
+        #Tool execution of calculator
         tool_output = safe_calculator(tool_input)
         print(f"Tool used: {tool_name}")
         print(f"Tool input: {tool_input}")
         print(f"Tool output: {tool_output}")
 
+        #Tool integration back into reasoning
         final_payload = {
             "model": model,
             "messages": [

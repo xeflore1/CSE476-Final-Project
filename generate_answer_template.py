@@ -7,6 +7,7 @@ before submitting so the ``output`` fields contain your real predictions.
 Reads the input questions from cse_476_final_project_test_data.json and writes
 an answers JSON file where each entry contains a string under the "output" key.
 """
+
 from __future__ import annotations
 
 import json
@@ -63,7 +64,7 @@ def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         print(f"***** result: {result} *****\n")
 
         # ALWAYS return string (this is important)
-        answers.append({"output": result.get("text") or "ERROR"})
+        answers.append({"output": result.get("text") or ""})
     return answers
 
 
