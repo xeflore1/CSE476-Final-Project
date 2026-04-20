@@ -343,3 +343,94 @@ if __name__ == "__main__":
 
     print("\nFINAL RESULT:")
     print(result)
+
+def react_agent(prompt: str,
+                model: str = MODEL,
+                temperature: float = 0.2,
+                max_steps: int = 3,
+                timeout: int = 60) -> dict:
+
+    print(f"ReAct running with prompt: {prompt}\n")
+
+    url = f"{API_BASE}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    history = []
+
+    for step in range(max_steps):
+        print(f"ReAct step {step}")
+        # Thought to action to observation to thought to action and finally the observation
+        # sidenote model sometimes treats ALL CAPS as emphasis - Gabriel (I'll ask TA/prof if itll work)
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a reasoning agent that MUST solve problems step-by-step.\n\n"
+                    "STRICT RULES:\n"
+                    "- You are NOT allowed to solve the problem in one step\n"
+                    "- You MUST break the problem into multiple steps\n"
+                    "- Each step MUST include Thought and Action\n"
+                    "- After each Action, you MUST wait for an Observation\n"
+                    "- You MUST explicitly use the Observation in your next Thought\n"
+                    "- Do NOT assume results without using the Observation\n"
+                    "- Only give Final Answer after multiple steps\n\n"
+                    "Format:\n"
+                    "Thought: ...\n"
+                    "Action: calculator(expression)\n"
+                    "OR\n"
+                    "Final Answer: ..."
+                )
+            },
+            {"role": "user", "content": prompt}
+        ]
+
+        # include past steps
+        for h in history:
+            messages.append({"role": "assistant", "content": h})
+
+        resp = requests.post(
+            url,
+            headers=headers,
+            json={
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": 512
+            },
+            timeout=timeout,
+            verify=False
+        )
+
+        data = resp.json()
+        text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+        print("Model says:", text)
+
+        history.append(text)
+
+        # This is to check if final answer
+        if "Final Answer:" in text:
+            return {"ok": True, "text": text}
+
+        # so we check if action needed
+        match = re.search(r"calculator\((.*?)\)", text)
+
+        if match:
+            expr = match.group(1)
+            obs = safe_calculator(expr)
+            observation = f"Observation: {obs}"
+            print(observation)
+            history.append(observation)
+
+if __name__ == "__main__":
+    print("Testing ReAct...\n")
+
+    test_question = "What is 25 * 16 + 4?"
+
+    result = react_agent(test_question)
+
+    print("\nFINAL RESULT:")
+    print(result)
