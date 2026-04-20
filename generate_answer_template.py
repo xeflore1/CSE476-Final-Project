@@ -9,21 +9,21 @@ an answers JSON file where each entry contains a string under the "output" key.
 """
 from __future__ import annotations
 
-import json
+import json, re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
+from utils import extract_answer
+from technique.chain_of_thought import chain_of_thought
+from technique.self_consistency import self_consistency
 
 # Load .env
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
-import finalProject as final_project
-
 INPUT_PATH = Path(__file__).parent / "personal_inputs.json"
 OUTPUT_PATH = Path(__file__).parent / "cse_476_final_project_answers.json"
-
-
+    
 def load_questions(path: Path) -> List[Dict[str, Any]]:
     with path.open("r") as fp:
         data = json.load(fp)
@@ -41,19 +41,21 @@ def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         # answers.append({"output": real_answer})
 
         # call chain of thought
-        # print(f"***** idx: {idx}, question: {question['input']} *****\n")
-        # result = final_project.chain_of_thought(question["input"])
-        # print("OK:", result["ok"], "HTTP:", result["status"])
-        # print("MODEL SAYS:", (result["text"] or "").strip())
-        # answers.append({"output": result["text"] or ""})
+        print(f"***** idx: {idx}, question: {question['input']} *****\n")
+        result = chain_of_thought(question["input"])
+        print("OK:", result["ok"], "HTTP:", result["status"])
+        print("MODEL SAYS:", (result["text"] or "").strip())
+        modelAnswer = extract_answer(result["text"])
+        print(modelAnswer)
+        answers.append({"output": modelAnswer or ""})
 
         # call self-consistency
-        print(f"***** idx: {idx}, question: {question['input']} *****\n")
-        result = final_project.self_consistency(question["input"])
-        print(f"***** result: {result} *****\n")
-        # print("OK:", result["ok"], "HTTP:", result["status"])
-        # print("MODEL SAYS:", (result["text"] or "").strip())
-        answers.append({"output": result})
+        # print(f"***** idx: {idx}, question: {question['input']} *****\n")
+        # result = self_consistency(question["input"])
+        # print(f"***** result: {result} *****\n")
+        # # print("OK:", result["ok"], "HTTP:", result["status"])
+        # # print("MODEL SAYS:", (result["text"] or "").strip())
+        # answers.append({"output": result})
 
     return answers
 
