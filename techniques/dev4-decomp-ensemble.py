@@ -109,9 +109,9 @@ def ensemble_voting(prompt: str,
             decomp_thread = threads.submit(decomposition, prompt, new_system, model, temperature, timeout, max_tokens)
             tool_aug_thread = threads.submit(tool_augmented_reasoning, prompt, new_system, model, temperature, timeout, max_tokens)
 
-            answers_list.append(cot_thread)
-            answers_list.append(decomp_thread)
-            answers_list.append(tool_aug_thread)
+            answers_list.append(cot_thread.result())
+            answers_list.append(decomp_thread.result())
+            answers_list.append(tool_aug_thread.result())
         answers_list = [x for x in answers_list if x is not None]
         if not answers_list:
             return "No answer could be found"
@@ -122,12 +122,12 @@ def ensemble_voting(prompt: str,
     elif domain == "common_sense":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
             cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            decomp_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
-            tool_aug_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
+            self_refine_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
+            prompt_opt_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
 
-            answers_list.append(cot_thread)
-            answers_list.append(decomp_thread)
-            answers_list.append(tool_aug_thread)
+            answers_list.append(cot_thread.result())
+            answers_list.append(self_refine_thread.result())
+            answers_list.append(prompt_opt_thread.result())
             answers_list = [x for x in answers_list if x is not None]
         if not answers_list:
             return "No answer could be found"
@@ -137,13 +137,13 @@ def ensemble_voting(prompt: str,
         
     elif domain == "coding":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(react_agent, prompt, new_system, model, temperature, timeout, max_tokens)
-            decomp_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            tool_aug_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
+            react_thread = threads.submit(react_agent, prompt, new_system, model, temperature, timeout, max_tokens)
+            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
+            self_refine_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
 
-            answers_list.append(cot_thread)
-            answers_list.append(decomp_thread)
-            answers_list.append(tool_aug_thread)
+            answers_list.append(react_thread.result())
+            answers_list.append(cot_thread.result())
+            answers_list.append(self_refine_thread.result())
             answers_list = [x for x in answers_list if x is not None]
         if not answers_list:
             return "No answer could be found"
@@ -154,12 +154,12 @@ def ensemble_voting(prompt: str,
     elif domain == "future_prediction":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
             cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            decomp_thread = threads.submit(self_consistency, prompt, new_system, model, temperature, timeout, max_tokens)
-            tool_aug_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
+            self_con_thread = threads.submit(self_consistency, prompt, new_system, model, temperature, timeout, max_tokens)
+            prompt_opt_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
 
-            answers_list.append(cot_thread)
-            answers_list.append(decomp_thread)
-            answers_list.append(tool_aug_thread)
+            answers_list.append(cot_thread.result())
+            answers_list.append(self_con_thread.result())
+            answers_list.append(prompt_opt_thread.result())
             answers_list = [x for x in answers_list if x is not None]
         if not answers_list:
             return "No answer could be found"
@@ -169,13 +169,13 @@ def ensemble_voting(prompt: str,
         
     elif domain == "planning":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(decomposition, prompt, new_system, model, temperature, timeout, max_tokens)
-            decomp_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            tool_aug_thread = threads.submit(tree_og_thought, prompt, new_system, model, temperature, timeout, max_tokens)
+            decomp_thread = threads.submit(decomposition, prompt, new_system, model, temperature, timeout, max_tokens)
+            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
+            tree_thread = threads.submit(tree_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
 
-            answers_list.append(cot_thread)
-            answers_list.append(decomp_thread)
-            answers_list.append(tool_aug_thread)
+            answers_list.append(decomp_thread.result())
+            answers_list.append(cot_thread.result())
+            answers_list.append(tree_thread.result())
             answers_list = [x for x in answers_list if x is not None]
         if not answers_list:
             return "No answer could be found"
