@@ -134,7 +134,40 @@ def ensemble_voting(prompt: str,
         else:
             counter_object = Counter(answers_list)
             return counter_object.most_common()[0][0]
-    elif domain == "common_sense":
+        
+    elif domain == "coding":
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
+            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
+            decomp_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
+            tool_aug_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
+
+            answers_list.append(cot_thread)
+            answers_list.append(decomp_thread)
+            answers_list.append(tool_aug_thread)
+            answers_list = [x for x in answers_list if x is not None]
+        if not answers_list:
+            return "No answer could be found"
+        else:
+            counter_object = Counter(answers_list)
+            return counter_object.most_common()[0][0]
+        
+    elif domain == "future_prediction":
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
+            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
+            decomp_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
+            tool_aug_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
+
+            answers_list.append(cot_thread)
+            answers_list.append(decomp_thread)
+            answers_list.append(tool_aug_thread)
+            answers_list = [x for x in answers_list if x is not None]
+        if not answers_list:
+            return "No answer could be found"
+        else:
+            counter_object = Counter(answers_list)
+            return counter_object.most_common()[0][0]
+        
+    elif domain == "planning":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
             cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
             decomp_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
