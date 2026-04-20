@@ -56,14 +56,14 @@ def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         # print("MODEL SAYS:", (result["text"] or "").strip())
     #    answers.append({"output": result})
 
-        # call tool-augmented reasoning
+        # calling Tool Augmented reasoning for now
         print(f"***** idx: {idx}, question: {question['input']} *****\n")
 
         result = final_project.tool_augmented_reasoning(question["input"])
 
         print(f"***** result: {result} *****\n")
 
-        # ALWAYS return string (this is important)
+        # return string (this is important)
         answers.append({"output": result.get("text") or ""})
     return answers
 
