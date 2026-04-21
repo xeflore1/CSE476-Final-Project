@@ -1,19 +1,11 @@
 from __future__ import annotations
-
 import re
-import requests
-
-import finalProject as final_project
+from api_wrapper import call_model_chat_completions, MODEL
 
 JUDGE_MAX_TOKENS = 32
 
-# Helper function to call the LLM endpoint with the given system, user, model, and temperature.
-def _chat(system: str, user: str, model: str, temperature: float) -> dict:
-    url = f"{final_project.API_BASE}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {final_project.API_KEY}",
-        "Content-Type": "application/json",
-    }
+
+def _chat(system, user, model, temperature):
     payload = {
         "model": model,
         "messages": [
@@ -24,14 +16,12 @@ def _chat(system: str, user: str, model: str, temperature: float) -> dict:
         "max_tokens": JUDGE_MAX_TOKENS,
     }
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=120)
-        if resp.status_code != 200:
+        res = call_model_chat_completions(payload, model=model, temperature=temperature, timeout=120)
+        if not res["ok"]:
             return {"ok": False, "text": None}
-        data = resp.json()
-        text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-        return {"ok": True, "text": text}
-    except requests.RequestException:
-        return {"ok": False, "text": None}
+        return {"ok": True, "text": res["text"]}
+    except Exception as e:
+        return {"ok": False, "text": None, "error": str(e)}
 
 # Helper function to parse the boolean response from the LLM.
 def _parse_bool(text: str | None, prediction, expected) -> bool:
