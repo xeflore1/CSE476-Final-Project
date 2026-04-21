@@ -1,3 +1,5 @@
+"""Agent router / orchestrator. Entry point: agent(prompt)."""
+
 from domain_classifier import classify_domain
 from techniques.prompt_optimization import prompt_optimized_call
 from techniques.llm_as_judge import confidence_check
@@ -67,9 +69,9 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
     if verbose:
         print(f"[router] domain={domain} primary={primary_name} calls_so_far={calls_used}")
     if calls_used < BUDGET_PER_QUESTION - 3 and ans:
-        conf = confidence_check(prompt, ans)
-        calls_used += conf.get("calls", 0)
-        if conf.get("level") == "low":
+        confidence = confidence_check(prompt, ans)
+        calls_used += confidence.get("calls", 0)
+        if confidence.get("level") == "low":
             remaining = BUDGET_PER_QUESTION - calls_used
             if remaining >= 6:
                 ens = ensemble_vote(
@@ -92,3 +94,10 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
     if len(ans) > 4900:
         ans = ans[:4900]
     return ans
+
+
+if __name__ == "__main__":
+    import sys
+
+    q = " ".join(sys.argv[1:]) or "What is 2 + 2?"
+    print(agent(q, verbose=True))
