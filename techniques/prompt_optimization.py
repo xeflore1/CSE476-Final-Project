@@ -1,20 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-import requests
-from dotenv import load_dotenv
 from api_wrapper import call_model_chat_completions, MODEL
 import output_instructions
 
 def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeout) -> dict:
 
     print(f"Prompt optimization is running with prompt: {prompt}\n")
-    url = f"{final_project.API_BASE}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {final_project.API_KEY}",
-        "Content-Type":  "application/json",
-    }
 
     def math_guidlines():
         return """
@@ -119,7 +110,7 @@ def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeou
     }
 
     try:
-        resp = call_model_chat_completions(payload, model=model, temperature=temperature, timeout=timeout)
+        res = call_model_chat_completions(payload, model=model, temperature=temperature, timeout=timeout)
         if not res["ok"]:
             return {"optimized": prompt, "calls": res.get("calls", 0)}
         return {"optimized": res["text"], "calls": res["calls"]}
