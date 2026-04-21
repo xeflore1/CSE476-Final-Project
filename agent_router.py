@@ -43,41 +43,6 @@ def _run_counted(fn, *args, **kwargs):
 
 _TOK = {"math": 256, "common_sense": 256, "coding": 1024, "future_prediction": 256, "planning": 512}
 
-_LLM_ESTIMATE = {
-    "prompt_optimized_call": 1,
-    "chain_of_thought": 1,
-    "self_consistency": 4,
-    "tree_of_thought": 8,
-    "self_refine": 3,
-    "react": 4,
-    "tool_augmented": 3,
-    "decomposition": 5,
-    "ensemble_vote": 6,
-}
-
-
-class QuestionLLMBudget:
-    __slots__ = ("used", "limit")
-
-    def __init__(self, limit=18):
-        self.used = 0
-        self.limit = limit
-
-    def remaining(self) -> int:
-        return max(0, self.limit - self.used)
-
-
-def estimate_technique_llm_calls(technique) -> int:
-    return _LLM_ESTIMATE.get(getattr(technique, "__name__", ""), 1)
-
-
-def track_llm_calls(budget: QuestionLLMBudget, technique) -> bool:
-    n = estimate_technique_llm_calls(technique)
-    if budget.used + n > budget.limit:
-        return False
-    budget.used += n
-    return True
-
 
 def _normalize_raw(res):
     if isinstance(res, dict):
@@ -103,7 +68,7 @@ def _invoke(technique, question_text, domain):
     return technique(question_text)
 
 
-def route_question(question_text, domain, budget=None):
+def route_question(question_text, domain):
     techniques = []
     if domain == "math":
         techniques.append(chain_of_thought)
@@ -117,19 +82,13 @@ def route_question(question_text, domain, budget=None):
         techniques.append(prompt_optimized_call)
     elif domain == "planning":
         techniques.append(decomposition)
-    if budget is None:
-        return techniques
-    rem = budget.remaining()
-    return [t for t in techniques if estimate_technique_llm_calls(t) <= rem]
+    return techniques
 
 
 def agent(question_text) -> str:
     domain = classify_domain(question_text)
-    budget = QuestionLLMBudget()
-    techniques = route_question(question_text, domain, budget)
+    techniques = route_question(question_text, domain)
     for technique in techniques:
-        if not track_llm_calls(budget, technique):
-            continue
         raw = _invoke(technique, question_text, domain)
         text = _normalize_raw(raw)
         out = extract_answer(text, domain)
