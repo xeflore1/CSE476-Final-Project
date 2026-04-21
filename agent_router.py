@@ -1,6 +1,4 @@
-from api_wrapper import MODEL
 from domain_classifier import classify_domain
-from answer_extraction import extract_answer
 from techniques.prompt_optimization import prompt_optimized_call
 from techniques.llm_as_judge import confidence_check
 
@@ -44,54 +42,32 @@ def _run_counted(fn, *args, **kwargs):
 _TOK = {"math": 256, "common_sense": 256, "coding": 1024, "future_prediction": 256, "planning": 512}
 
 
-def _normalize_raw(res):
-    if isinstance(res, dict):
-        if not res.get("ok"):
-            return ""
-        t = res.get("text")
-        return t if t is not None else ""
-    if res is None:
-        return ""
-    return str(res)
-
-
-def _invoke(technique, question_text, domain):
-    if getattr(technique, "__name__", "") == "prompt_optimized_call":
-        return prompt_optimized_call(
-            question_text,
-            domain,
-            final_project.MODEL,
-            0.0,
-            _TOK.get(domain, 256),
-            180,
-        )
-    return technique(question_text)
-
-
-def route_question(question_text, domain):
-    techniques = []
-    if domain == "math":
-        techniques.append(chain_of_thought)
-        techniques.append(self_consistency)
-    elif domain == "common_sense":
-        techniques.append(prompt_optimized_call)
-    elif domain == "coding":
-        techniques.append(react)
-        techniques.append(tool_augmented)
-    elif domain == "future_prediction":
-        techniques.append(prompt_optimized_call)
-    elif domain == "planning":
-        techniques.append(decomposition)
-    return techniques
-
-
-def agent(question_text) -> str:
-    domain = classify_domain(question_text)
-    techniques = route_question(question_text, domain)
-    for technique in techniques:
-        raw = _invoke(technique, question_text, domain)
-        text = _normalize_raw(raw)
-        out = extract_answer(text, domain)
-        if out:
-            return out
-    return ""
+def agent(prompt: str, *, verbose: bool = False) -> str:
+    calls_used = 0
+    domain = classify_domain(prompt)
+    opt = prompt_optimized_call(
+        prompt,
+        domain,
+        final_project.MODEL,
+        0.0,
+        _TOK.get(domain, 256),
+        180,
+    )
+    calls_used += opt.get("calls", 0)
+    optimized = opt.get("optimized") or prompt
+    primary_name = _DEFAULT_FIRST.get(domain, "chain_of_thought")
+    primary_fn = TECHNIQUES[primary_name]
+    ans, c, _ = _run_counted(
+        primary_fn,
+        optimized,
+        domain,
+        max_tokens=min(1024, 50 * max(1, BUDGET_PER_QUESTION - calls_used)),
+    )
+    calls_used += c
+    if verbose:
+        print(f"[router] domain={domain} primary={primary_name} calls_so_far={calls_used}")
+    if ans is None:
+        ans = ""
+    if len(ans) > 4900:
+        ans = ans[:4900]
+    return ans
