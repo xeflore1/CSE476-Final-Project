@@ -4,6 +4,11 @@ from api_wrapper import call_model_chat_completions, MODEL
 
 JUDGE_MAX_TOKENS = 32
 
+_CONFIDENCE_SYS = (
+    "Rate confidence in the answer. Reply with high, medium, or low. "
+    "Or a single digit 1-5 (5 = most confident)."
+)
+
 
 def _chat(system, user, model, temperature):
     payload = {
@@ -50,13 +55,6 @@ def _parse_choice(text: str | None, n: int) -> int:
             return v
     return 1
 
-# Helper function to parse the confidence response from the LLM.
-def _parse_confidence(text: str | None) -> int:
-    if not text:
-        return 5
-    m = re.search(r"\b(10|[1-9])\b", text.strip())
-    return int(m.group(1)) if m else 5
-
 # Binary Judge is a function that judges if the prediction is correct or not. It returns True if the prediction is correct and False otherwise.
 def binary_judge(question, prediction, expected, model, temperature=0.0) -> bool:
     system = "You are a strict grader. Reply with exactly True or False. No explanation."
@@ -85,12 +83,30 @@ def comparative_judge(question, candidates, model, temperature=0.0) -> int:
     r = _chat(system, user, model, temperature)
     return _parse_choice(r.get("text"), n)
 
-# Confidence Check is a function that checks the confidence of the answer. It returns the confidence score.
-def confidence_check(question, answer, model, temperature=0.0) -> int:
-    system = (
-        "Rate your confidence in this answer from 1 (very unsure) to 10 (certain). "
-        "Reply with just the number."
-    )
-    user = f"Question: {question}\nAnswer: {answer}\nConfidence (1-10):"
-    r = _chat(system, user, model, temperature)
-    return _parse_confidence(r.get("text"))
+def confidence_check(question, answer, *, model=MODEL, temperature=0.0) -> dict:
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": _CONFIDENCE_SYS},
+            {"role": "user", "content": f"Q: {question}\nA: {answer}"},
+        ],
+        "temperature": temperature,
+        "max_tokens": 8,
+    }
+    try:
+        res = call_model_chat_completions(payload, model=model, temperature=temperature, timeout=120)
+    except Exception as e:
+        return {"ok": False, "level": "medium", "calls": 0, "error": str(e)}
+    text = (res.get("text") or "").strip().lower()
+    if "high" in text or text.startswith(("4", "5")):
+        level = "high"
+    elif "low" in text or text.startswith(("1",)):
+        level = "low"
+    else:
+        level = "medium"
+    return {
+        "ok": res.get("ok", False),
+        "level": level,
+        "calls": res.get("calls", 0),
+        "error": res.get("error"),
+    }
