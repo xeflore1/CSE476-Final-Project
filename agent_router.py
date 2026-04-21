@@ -66,6 +66,27 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
     calls_used += c
     if verbose:
         print(f"[router] domain={domain} primary={primary_name} calls_so_far={calls_used}")
+    if calls_used < BUDGET_PER_QUESTION - 3 and ans:
+        conf = confidence_check(prompt, ans)
+        calls_used += conf.get("calls", 0)
+        if conf.get("level") == "low":
+            remaining = BUDGET_PER_QUESTION - calls_used
+            if remaining >= 6:
+                ens = ensemble_vote(
+                    optimized,
+                    domain,
+                    techniques_dict=TECHNIQUES,
+                )
+                calls_used += ens.get("calls", 0)
+                if ens.get("ok") and ens.get("answer"):
+                    ans = ens["answer"]
+            elif remaining >= 3:
+                sr = self_refine(optimized, domain, max_iterations=1)
+                calls_used += sr.get("calls", 0)
+                if sr.get("ok") and sr.get("answer"):
+                    ans = sr["answer"]
+    if verbose:
+        print(f"[router] final_calls={calls_used}")
     if ans is None:
         ans = ""
     if len(ans) > 4900:
