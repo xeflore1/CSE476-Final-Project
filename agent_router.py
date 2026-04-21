@@ -34,6 +34,13 @@ _DEFAULT_FIRST = {
 
 BUDGET_PER_QUESTION = 20
 
+
+def _run_counted(fn, *args, **kwargs):
+    # Call a technique and return (answer, calls_used, full_result).
+    res = fn(*args, **kwargs)
+    return res.get("answer", ""), res.get("calls", 0), res
+
+
 _TOK = {"math": 256, "common_sense": 256, "coding": 1024, "future_prediction": 256, "planning": 512}
 
 _LLM_ESTIMATE = {
