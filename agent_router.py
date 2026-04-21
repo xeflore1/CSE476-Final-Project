@@ -1,5 +1,10 @@
+from api_wrapper import MODEL
 from domain_classifier import classify_domain
 from answer_extraction import extract_answer
+from techniques.prompt_optimization import optimize_prompt
+from techniques.llm_as_judge import confidence_check
+
+# Technique imports
 from techniques.chain_of_thought import chain_of_thought
 from techniques.self_consistency import self_consistency
 from techniques.tree_of_thought import tree_of_thought
@@ -8,9 +13,6 @@ from techniques.react_agent import react
 from techniques.tool_augmented import tool_augmented
 from techniques.decomposition import decomposition
 from techniques.ensemble_voting import ensemble_vote
-from techniques.prompt_optimization import prompt_optimized_call
-from techniques.llm_as_judge import confidence_check
-
 import finalProject as final_project
 
 _TOK = {"math": 256, "common_sense": 256, "coding": 1024, "future_prediction": 256, "planning": 512}
