@@ -7,7 +7,9 @@ import ast
 from dev2techniques import self_refinement
 from chain_of_thought import chain_of_thought
 from decomposition import decomposition
-
+from tool_augmented import tool_augmented
+from prompt_optimization import prompt_optimized_call
+from self_consistency import self_consistency
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')
@@ -72,7 +74,7 @@ def ensemble_voting(prompt: str,
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
             cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
             decomp_thread = threads.submit(decomposition, prompt, new_system, model, temperature, timeout, max_tokens)
-            tool_aug_thread = threads.submit(tool_augmented_reasoning, prompt, new_system, model, temperature, timeout, max_tokens)
+            tool_aug_thread = threads.submit(tool_augmented, prompt, new_system, model, temperature, timeout, max_tokens)
 
             answers_list.append(cot_thread.result())
             answers_list.append(decomp_thread.result())
@@ -88,7 +90,7 @@ def ensemble_voting(prompt: str,
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
             cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
             self_refine_thread = threads.submit(self_refinement, prompt, new_system, model, temperature, timeout, max_tokens)
-            prompt_opt_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
+            prompt_opt_thread = threads.submit(prompt_optimized_call, prompt, new_system, model, temperature, timeout, max_tokens)
 
             answers_list.append(cot_thread.result())
             answers_list.append(self_refine_thread.result())
@@ -120,7 +122,7 @@ def ensemble_voting(prompt: str,
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
             cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
             self_con_thread = threads.submit(self_consistency, prompt, new_system, model, temperature, timeout, max_tokens)
-            prompt_opt_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
+            prompt_opt_thread = threads.submit(prompt_optimized_call, prompt, new_system, model, temperature, timeout, max_tokens)
 
             answers_list.append(cot_thread.result())
             answers_list.append(self_con_thread.result())
