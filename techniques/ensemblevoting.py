@@ -7,6 +7,7 @@ import ast
 from dev2techniques import self_refinement
 from chain_of_thought import chain_of_thought
 from decomposition import decomposition
+
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')
