@@ -4,12 +4,13 @@ import concurrent.futures
 from collections import Counter
 from dotenv import load_dotenv
 import ast
-from dev2techniques import self_refinement
+from dev2techniques import self_refinement, tree_of_thought
 from chain_of_thought import chain_of_thought
 from decomposition import decomposition
 from tool_augmented import tool_augmented
 from prompt_optimization import prompt_optimized_call
 from self_consistency import self_consistency
+from react_agent import react_agent
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')
@@ -70,82 +71,83 @@ def ensemble_voting(prompt: str,
     first_call = calling_api(prompt, system, model, temperature, timeout, max_tokens=500)
     domain = extract_answer(first_call["text"])
     answers_list = []
+    max_tokens = 5000
     if domain == "math":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            decomp_thread = threads.submit(decomposition, prompt, new_system, model, temperature, timeout, max_tokens)
-            tool_aug_thread = threads.submit(tool_augmented, prompt, new_system, model, temperature, timeout, max_tokens)
+            cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
+            decomp_thread = threads.submit(decomposition, prompt, model, temperature, timeout, max_tokens)
+            tool_aug_thread = threads.submit(tool_augmented, prompt, model, temperature, timeout, max_tokens)
 
             answers_list.append(cot_thread.result())
             answers_list.append(decomp_thread.result())
             answers_list.append(tool_aug_thread.result())
         answers_list = [x for x in answers_list if x is not None]
         if not answers_list:
-            return "No answer could be found"
+            return {'ok': False, 'text': "No answer could be found"}
         else:
             counter_object = Counter(answers_list)
-            return counter_object.most_common()[0][0]
+            return {'ok': True, "text": counter_object.most_common()[0][0]}
         
     elif domain == "common_sense":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            self_refine_thread = threads.submit(self_refinement, prompt, new_system, model, temperature, timeout, max_tokens)
-            prompt_opt_thread = threads.submit(prompt_optimized_call, prompt, new_system, model, temperature, timeout, max_tokens)
+            cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
+            self_refine_thread = threads.submit(self_refinement, prompt, model, temperature, timeout, max_tokens)
+            prompt_opt_thread = threads.submit(prompt_optimized_call, prompt,  model, temperature, timeout, max_tokens)
 
             answers_list.append(cot_thread.result())
             answers_list.append(self_refine_thread.result())
             answers_list.append(prompt_opt_thread.result())
             answers_list = [x for x in answers_list if x is not None]
         if not answers_list:
-            return "No answer could be found"
+            return {'ok': False, 'text': "No answer could be found"}
         else:
             counter_object = Counter(answers_list)
-            return counter_object.most_common()[0][0]
+            return {'ok': True, 'text': counter_object.most_common()[0][0]}
         
     elif domain == "coding":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            react_thread = threads.submit(react_agent, prompt, new_system, model, temperature, timeout, max_tokens)
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            self_refine_thread = threads.submit(self_refinement, prompt, new_system, model, temperature, timeout, max_tokens)
+            react_thread = threads.submit(react_agent, prompt, model, temperature, timeout, max_tokens)
+            cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
+            self_refine_thread = threads.submit(self_refinement, prompt, model, temperature, timeout, max_tokens)
 
             answers_list.append(react_thread.result())
             answers_list.append(cot_thread.result())
             answers_list.append(self_refine_thread.result())
             answers_list = [x for x in answers_list if x is not None]
         if not answers_list:
-            return "No answer could be found"
+            return {'ok': False, 'text': "No answer could be found"}
         else:
             counter_object = Counter(answers_list)
-            return counter_object.most_common()[0][0]
+            return {'ok': True, 'text': counter_object.most_common()[0][0]}
         
     elif domain == "future_prediction":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            self_con_thread = threads.submit(self_consistency, prompt, new_system, model, temperature, timeout, max_tokens)
-            prompt_opt_thread = threads.submit(prompt_optimized_call, prompt, new_system, model, temperature, timeout, max_tokens)
+            cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
+            self_con_thread = threads.submit(self_consistency, prompt, model, temperature, timeout, max_tokens)
+            prompt_opt_thread = threads.submit(prompt_optimized_call, prompt, model, temperature, timeout, max_tokens)
 
             answers_list.append(cot_thread.result())
             answers_list.append(self_con_thread.result())
             answers_list.append(prompt_opt_thread.result())
             answers_list = [x for x in answers_list if x is not None]
         if not answers_list:
-            return "No answer could be found"
+            return {'ok': False, 'text': "No answer could be found"}
         else:
             counter_object = Counter(answers_list)
-            return counter_object.most_common()[0][0]
+            return {'ok': True, 'text': counter_object.most_common()[0][0]}
         
     elif domain == "planning":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            decomp_thread = threads.submit(decomposition, prompt, new_system, model, temperature, timeout, max_tokens)
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            tree_thread = threads.submit(tree_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
+            decomp_thread = threads.submit(decomposition, prompt, model, temperature, timeout, max_tokens)
+            cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
+            tree_thread = threads.submit(tree_of_thought, prompt, model, temperature, timeout, max_tokens)
 
             answers_list.append(decomp_thread.result())
             answers_list.append(cot_thread.result())
             answers_list.append(tree_thread.result())
             answers_list = [x for x in answers_list if x is not None]
         if not answers_list:
-            return "No answer could be found"
+            return {'ok': False, 'text': "No answer could be found"}
         else:
             counter_object = Counter(answers_list)
-            return counter_object.most_common()[0][0]
+            return {'ok': True, 'text': counter_object.most_common()[0][0]}
