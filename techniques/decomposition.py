@@ -54,7 +54,7 @@ def decomposition(prompt: str,
     final_prompt = "Question: " + prompt + "\n" + "The following 3 answers are the answers to each subproblem:\n" + subproblem_response + "\n\nCombine all of these sub-solutions into a final solution to the question\n" + "Your final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>"
     max_tokens = 8000
     last_response = calling_api(final_prompt, new_system, model, temperature, timeout, max_tokens)
-    return extract_answer(last_response["text"])
+    return last_response
 
     
 

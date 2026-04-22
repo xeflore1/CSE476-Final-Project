@@ -4,6 +4,9 @@ import concurrent.futures
 from collections import Counter
 from dotenv import load_dotenv
 import ast
+from dev2techniques import self_refinement
+from chain_of_thought import chain_of_thought
+from decomposition import decomposition
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')
@@ -83,7 +86,7 @@ def ensemble_voting(prompt: str,
     elif domain == "common_sense":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
             cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            self_refine_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
+            self_refine_thread = threads.submit(self_refinement, prompt, new_system, model, temperature, timeout, max_tokens)
             prompt_opt_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
 
             answers_list.append(cot_thread.result())
@@ -100,7 +103,7 @@ def ensemble_voting(prompt: str,
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
             react_thread = threads.submit(react_agent, prompt, new_system, model, temperature, timeout, max_tokens)
             cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            self_refine_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
+            self_refine_thread = threads.submit(self_refinement, prompt, new_system, model, temperature, timeout, max_tokens)
 
             answers_list.append(react_thread.result())
             answers_list.append(cot_thread.result())
