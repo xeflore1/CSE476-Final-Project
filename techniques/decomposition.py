@@ -37,20 +37,22 @@ def decomposition(prompt: str,
     #with concurrent.futures.ThreadPoolExecutor(max_workers = 3):
     #return first_response
     subproblem_list = ast.literal_eval(first_response["text"])
-    new_system = "You are a logical assistant. Think step-by-step and answer the given question. You must answer in UTF-8"
-    max_tokens = 5000
-    #print(subproblem_list)
+    new_system = "You are a logical assistant. Think step-by-step and answer the given question. You must answer in UTF-8. Output your answer concisely. Answer MUST be EXACTLY in the format \\boxed{answer}."
+    max_tokens = 8000
+    print(subproblem_list)
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
         futures = {threads.submit(calling_api, subproblem, new_system, model, temperature, timeout, max_tokens) for subproblem in subproblem_list}
         subproblem_response = ""
         for i in concurrent.futures.as_completed(futures):
             try:
-                subproblem_response = subproblem_response + i.result()["text"] + "\n"
+                subproblem_response = subproblem_response + "Subproblem:\n" + subproblem_list[i] + i.result()["text"] + "\n"
 
             except Exception as error:
                 print("Exception:", error)
+    print("Subproblem Response + Context after Completion:", subproblem_response)
+    new_system = "You have been provided with 3 subproblems, 3 sub-solutions to those subproblems, and the original problem. Your task is to output a combine solution using each sub-solution provided to you."
     final_prompt = "Question: " + prompt + "\n" + "The following 3 answers are the answers to each subproblem:\n" + subproblem_response + "\n\nCombine all of these sub-solutions into a final solution to the question\n" + "Your final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>"
-    max_tokens = 5000
+    max_tokens = 8000
     last_response = calling_api(final_prompt, new_system, model, temperature, timeout, max_tokens)
     return extract_answer(last_response["text"])
 
@@ -94,91 +96,4 @@ def calling_api(prompt: str, system: str, model: str, temperature: float, timeou
     except requests.RequestException as e:
         return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
 
-def ensemble_voting(prompt: str,
-                   system: str = "You are a logical assistant. Your job is to classify the problem into EXACTLY one of the following domains: math, common_sense, coding, future_prediction, or planning.\nYour final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>",
-                   model: str = MODEL,
-                   temperature: float = 0.15,
-                   timeout: int = 180):
-    # First have to find domain of problem
-    first_call = calling_api(prompt, system, model, temperature, timeout, max_tokens=500)
-    domain = extract_answer(first_call["text"])
-    answers_list = []
-    if domain == "math":
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            decomp_thread = threads.submit(decomposition, prompt, new_system, model, temperature, timeout, max_tokens)
-            tool_aug_thread = threads.submit(tool_augmented_reasoning, prompt, new_system, model, temperature, timeout, max_tokens)
 
-            answers_list.append(cot_thread.result())
-            answers_list.append(decomp_thread.result())
-            answers_list.append(tool_aug_thread.result())
-        answers_list = [x for x in answers_list if x is not None]
-        if not answers_list:
-            return "No answer could be found"
-        else:
-            counter_object = Counter(answers_list)
-            return counter_object.most_common()[0][0]
-        
-    elif domain == "common_sense":
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            self_refine_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
-            prompt_opt_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
-
-            answers_list.append(cot_thread.result())
-            answers_list.append(self_refine_thread.result())
-            answers_list.append(prompt_opt_thread.result())
-            answers_list = [x for x in answers_list if x is not None]
-        if not answers_list:
-            return "No answer could be found"
-        else:
-            counter_object = Counter(answers_list)
-            return counter_object.most_common()[0][0]
-        
-    elif domain == "coding":
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            react_thread = threads.submit(react_agent, prompt, new_system, model, temperature, timeout, max_tokens)
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            self_refine_thread = threads.submit(self_refine, prompt, new_system, model, temperature, timeout, max_tokens)
-
-            answers_list.append(react_thread.result())
-            answers_list.append(cot_thread.result())
-            answers_list.append(self_refine_thread.result())
-            answers_list = [x for x in answers_list if x is not None]
-        if not answers_list:
-            return "No answer could be found"
-        else:
-            counter_object = Counter(answers_list)
-            return counter_object.most_common()[0][0]
-        
-    elif domain == "future_prediction":
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            self_con_thread = threads.submit(self_consistency, prompt, new_system, model, temperature, timeout, max_tokens)
-            prompt_opt_thread = threads.submit(prompt_optimization, prompt, new_system, model, temperature, timeout, max_tokens)
-
-            answers_list.append(cot_thread.result())
-            answers_list.append(self_con_thread.result())
-            answers_list.append(prompt_opt_thread.result())
-            answers_list = [x for x in answers_list if x is not None]
-        if not answers_list:
-            return "No answer could be found"
-        else:
-            counter_object = Counter(answers_list)
-            return counter_object.most_common()[0][0]
-        
-    elif domain == "planning":
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            decomp_thread = threads.submit(decomposition, prompt, new_system, model, temperature, timeout, max_tokens)
-            cot_thread = threads.submit(chain_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-            tree_thread = threads.submit(tree_of_thought, prompt, new_system, model, temperature, timeout, max_tokens)
-
-            answers_list.append(decomp_thread.result())
-            answers_list.append(cot_thread.result())
-            answers_list.append(tree_thread.result())
-            answers_list = [x for x in answers_list if x is not None]
-        if not answers_list:
-            return "No answer could be found"
-        else:
-            counter_object = Counter(answers_list)
-            return counter_object.most_common()[0][0]
