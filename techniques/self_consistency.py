@@ -1,10 +1,8 @@
-import os, json, textwrap, re, time
-import requests
-import concurrent.futures
+import os, concurrent.futures
 from collections import Counter
 from dotenv import load_dotenv
 from utils import extract_answer
-from technique.chain_of_thought import chain_of_thought
+from techniques.chain_of_thought import chain_of_thought
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')
@@ -18,14 +16,13 @@ def self_consistency(prompt: str,
                         "Your final answer MUST end with this exact format:\n"
                         "\\boxed{answer}\n"
                         "<DONE>"
-                    ),
-                     model: str = MODEL,
+                     ),
                      temperature: float = 0.5, # increase temp so that model explores different logical approaches
-                     timeout: int = 120):
+                    ):
 
     # Run chain of thought 4 times and pick the most frequent answer
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {executor.submit(chain_of_thought, prompt, system, model, temperature, timeout) for i in range(4)}
+        futures = {executor.submit(chain_of_thought, prompt, system, temperature) for i in range(4)}
         responses = []
         for future in concurrent.futures.as_completed(futures):
             response = future.result()
