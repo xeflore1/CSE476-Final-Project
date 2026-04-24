@@ -3,10 +3,14 @@ from tools import TOOL_REGISTRY
 from api_wrapper import call_model_chat_completions, MODEL
 
 def react_agent(prompt: str,
+                domain: str = "common_sense",
+                *,
                 model: str = MODEL,
                 temperature: float = 0.2,
                 max_steps: int = 3,
-                timeout: int = 60) -> dict:
+                max_tokens: int = 512,
+                timeout: int = 60,
+                **_ignored) -> dict:
 
     print(f"ReAct running with prompt: {prompt}\n")
 
@@ -46,7 +50,7 @@ def react_agent(prompt: str,
             messages=messages,
             model=model,
             temperature=temperature,
-            max_tokens=512,
+            max_tokens=max_tokens,
             timeout=timeout
         )
 
@@ -103,3 +107,6 @@ def react_agent(prompt: str,
         "calls": calls,
         "error": None
     }
+
+
+react = react_agent
