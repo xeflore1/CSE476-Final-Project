@@ -10,6 +10,13 @@ an answers JSON file where each entry contains a string under the "output" key.
 
 from __future__ import annotations
 
+import json, re
+import sys
+from pathlib import Path
+from typing import Any, Dict, List
+from utils import extract_answer
+from technique.chain_of_thought import chain_of_thought
+from technique.self_consistency import self_consistency
 import json
 from pathlib import Path
 from typing import Any, Dict, List
