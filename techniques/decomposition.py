@@ -58,15 +58,22 @@ def decomposition(prompt: str,
             subq = futures[i]
             try:
                 subproblem_response = subproblem_response + "Subproblem:\n" + subq + "Answer:\n" + i.result()["text"] + "\n"
-
             except Exception as error:
                 print("Exception:", error)
+                
     print("Subproblem Response + Context after Completion:", subproblem_response)
     new_system = "You have been provided with 3 subproblems, 3 sub-solutions to those subproblems, and the original problem. Your task is to output a combine solution using each sub-solution provided to you."
     final_prompt = "Original Question: " + prompt + "\n\n" + "The following are 3 subproblems and the corresponding answers to each subproblem:\n" + subproblem_response + "\n\nCombine all of these sub-solutions into a final solution to the question\n" + "Your final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>"
     max_tokens = 8000
     last_response = calling_api(final_prompt, new_system, model, temperature, timeout, max_tokens)
-    return last_response
+    return {
+        "ok": True,
+        "text": last_response['text'],
+        #"answer": "",
+        "answer": extract_answer(last_response['text']),
+        "calls": 5,
+        "error": None
+    }
 
     
 

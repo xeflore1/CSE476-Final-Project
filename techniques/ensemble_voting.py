@@ -49,19 +49,15 @@ def ensemble_vote(prompt: str,
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
         thread = [threads.submit(DOMAIN_TO_TECHNIQUES[i], prompt, domain, max_tokens, timeout) for i in techniques_to_be_used]
         #Process threads
-        answers_list = [a.result() for a in thread]   
-    if domain == "planning":
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            decomp_thread = threads.submit(decomposition, prompt, model, temperature, timeout, max_tokens)
-            cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
-            tree_thread = threads.submit(tree_of_thought, prompt, model, temperature, timeout, max_tokens)
+        for a in thread:
+            try:
+                answers_list.append(a.result())
+            except Exception as e:
+                print(f"Answer Failed in Ensemble Voting: {e}")
 
-            answers_list.append(decomp_thread.result())
-            answers_list.append(cot_thread.result())
-            answers_list.append(tree_thread.result())
-            answers_list = [x for x in answers_list if x is not None]
-        if not answers_list:
-            return {'ok': False, 'text': "No answer could be found"}
-        else:
-            counter_object = Counter(answers_list)
-            return {'ok': True, 'text': counter_object.most_common()[0][0]}
+    if not answers_list:
+        return {"ok": False, "text": None, "raw": None, "status": -1, "error": None, "headers": {}}
+    else:
+        answer = Counter(answers_list).most_common(1)[0][0]
+        return {"ok": True, "text": answer, 'answer': answer, "error": None}
+    
