@@ -36,7 +36,11 @@ def decomposition(prompt: str,
     """
     max_tokens = 2000
     my_system = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem.\n You must answer in UTF-8.\n Each subproblem must be independent of each other (can be solved parallelly) and easy-to-merge with other solutions.\n The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]"
-    first_response = calling_api(prompt, my_system, model, temperature, timeout, max_tokens)
+    messages = [
+            {"role": "system", "content": my_system},
+            {"role": "user",   "content": prompt},
+    ]
+    first_response = call_model_chat_completions(messages=messages, temperature=temperature, frequency_penalty=0.0, max_tokens=max_tokens, timeout=timeout)
     #first_response = requests.post(url, headers=headers, json=payload, timeout=timeout)
     #status = first_response.status_code
     #hdrs   = dict(first_response.headers)
@@ -49,7 +53,7 @@ def decomposition(prompt: str,
         subproblem_list = first_response["text"].split(',')
     new_system = "You are a logical assistant. Think step-by-step and answer the given question. You must answer in UTF-8. Output your answer concisely. Answer MUST be EXACTLY in the format \\boxed{answer}."
     max_tokens = 8000
-    print(subproblem_list)
+    print("Original List of Subproblems:\n" + subproblem_list)
     #subq_ans = {}
     subproblem_response = ""
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
@@ -65,10 +69,14 @@ def decomposition(prompt: str,
     new_system = "You have been provided with 3 subproblems, 3 sub-solutions to those subproblems, and the original problem. Your task is to output a combine solution using each sub-solution provided to you."
     final_prompt = "Original Question: " + prompt + "\n\n" + "The following are 3 subproblems and the corresponding answers to each subproblem:\n" + subproblem_response + "\n\nCombine all of these sub-solutions into a final solution to the question\n" + "Your final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>"
     max_tokens = 8000
-    last_response = calling_api(final_prompt, new_system, model, temperature, timeout, max_tokens)
+    messages = [
+            {"role": "system", "content": new_system},
+            {"role": "user",   "content": final_prompt},
+    ]
+    last_response = call_model_chat_completions(messages=messages, temperature=temperature, frequency_penalty=0.0, max_tokens=max_tokens, timeout=timeout)
     return {
         "ok": True,
-        "text": last_response['text'],
+        "text": last_response['text'][:30],
         #"answer": "",
         "answer": extract_answer(last_response['text']),
         "calls": 5,

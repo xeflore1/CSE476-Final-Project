@@ -43,6 +43,7 @@ def ensemble_vote(prompt: str,
                   max_tokens: int = 1024,
                   timeout: int = 120,
                   **_ignored) -> dict:
+    print("Running Ensemble Voting Now")
     answers_list = []
     max_tokens = 5000
     techniques_to_be_used = DOMAIN_TO_TECHNIQUES[domain]
