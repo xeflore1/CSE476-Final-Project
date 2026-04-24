@@ -6,12 +6,7 @@ API_KEY  = os.getenv('API-KEY')
 API_BASE = os.getenv("API_BASE", "https://openai.rc.asu.edu/v1")
 MODEL    = os.getenv("MODEL_NAME", "qwen3-30b-a3b-instruct-2507")
 
-def call_model_chat_completions(prompt: str,
-                     system: str = 
-                        "You are a logical assistant. Think step-by-step and explain your reasoning clearly before answering." 
-                        "Your final answer MUST end with this exact format:\n"
-                        "\\boxed{answer}\n"
-                        "<DONE>",
+def call_model_chat_completions(messages=None,
                      model: str = MODEL,
                      temperature: float = 0.3,
                      frequency_penalty: float = 0.0,
@@ -23,8 +18,7 @@ def call_model_chat_completions(prompt: str,
     { 'ok': bool, 'text': str or None, 'raw': dict or None, 'status': int, 'error': str or None, 'headers': dict }
     """
     print(f"""API running with params:\n
-    prompt: {prompt}\n
-    system: {system}\n
+    messages: {messages}\n
     model: {model}\n
     temp: {temperature}\n
     frequency_penalty: {frequency_penalty}\n
@@ -39,10 +33,11 @@ def call_model_chat_completions(prompt: str,
     }
     payload = {
         "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user",   "content": prompt}
-        ],
+        "messages": messages,
+        # "messages": [
+        #     {"role": "system", "content": system},
+        #     {"role": "user",   "content": prompt}
+        # ],
         "temperature": temperature,
         "max_tokens": max_tokens,
         "frequency_penalty": frequency_penalty,

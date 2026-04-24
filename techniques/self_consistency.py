@@ -22,7 +22,7 @@ def self_consistency(prompt: str,
 
     # Run chain of thought 4 times and pick the most frequent answer
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {executor.submit(chain_of_thought, prompt, system, temperature) for i in range(4)}
+        futures = {executor.submit(chain_of_thought, prompt=prompt, system=system, temperature=temperature) for i in range(4)}
         responses = []
         for future in concurrent.futures.as_completed(futures):
             response = future.result()
