@@ -9,7 +9,7 @@ print(repr(API_KEY))
 API_BASE = os.getenv("API_BASE", "https://openai.rc.asu.edu/v1")  
 MODEL    = os.getenv("MODEL_NAME", "qwen3-30b-a3b-instruct-2507")         
 
-def ask(prompt, system: str ="You are a helpful assistant ready to answer a question.", model: str = MODEL, temperature: float = 0.0, timeout: int = 60) -> dict:
+def self_refine(prompt, system: str ="You are a helpful assistant ready to answer a question.", model: str = MODEL, temperature: float = 0.0, timeout: int = 60) -> dict:
     """
     Basic ask function
     """
@@ -49,7 +49,7 @@ def ask(prompt, system: str ="You are a helpful assistant ready to answer a ques
         return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
     
 def self_refinement(prompt: str) -> dict:
-    answer1 = ask(prompt)
-    feedback1 = ask("Give your critique of this answer:\n\n" + (answer1["text"] or ""))
-    answer2 = ask("using this critique, give a better answer to the original question:\n\n" + feedback1["text"] or "")
+    answer1 = self_refine(prompt)
+    feedback1 = self_refine("Give your critique of this answer:\n\n" + (answer1["text"] or ""))
+    answer2 = self_refine("using this critique, give a better answer to the original question:\n\n" + feedback1["text"] or "")
     return {"answer1": answer1, "feedback1": feedback1, "answer2": answer2}
