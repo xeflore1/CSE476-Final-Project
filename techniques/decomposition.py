@@ -34,6 +34,7 @@ def decomposition(prompt: str,
     Calls an OpenAI-style /v1/chat/completions endpoint and returns:
     { 'ok': bool, 'text': str or None, 'raw': dict or None, 'status': int, 'error': str or None, 'headers': dict }
     """
+    print("Running with Decomposition Now")
     max_tokens = 2000
     my_system = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem.\n You must answer in UTF-8.\n Each subproblem must be independent of each other (can be solved parallelly) and easy-to-merge with other solutions.\n The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]"
     messages = [
@@ -53,7 +54,7 @@ def decomposition(prompt: str,
         subproblem_list = first_response["text"].split(',')
     new_system = "You are a logical assistant. Think step-by-step and answer the given question. You must answer in UTF-8. Output your answer concisely. Answer MUST be EXACTLY in the format \\boxed{answer}."
     max_tokens = 8000
-    print("Original List of Subproblems:\n" + subproblem_list)
+    print("Original List of Subproblems:\n" + str(subproblem_list))
     #subq_ans = {}
     subproblem_response = ""
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
