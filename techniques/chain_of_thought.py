@@ -1,6 +1,10 @@
 import os
 from dotenv import load_dotenv
+<<<<<<< HEAD
 from api_wrapper import call_LLM
+=======
+from techniques.api_wrapper import call_LLM
+>>>>>>> origin/main
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')

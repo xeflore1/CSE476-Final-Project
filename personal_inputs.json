@@ -1,7 +1,5 @@
 [
     {
-        "input": "Let $ABCD$ be a convex quadrilateral with $AB = CD = 10$ , $BC = 14$ , and $AD = 2\\sqrt{65}$ . Assume that the diagonals of $ABCD$ intersect at point $P$ , and that the sum of the areas of triangles $APB$ and $CPD$ equals the sum of the areas of triangles $BPC$ and $APD$ . Find the area of quadrilateral $ABCD$ .",
-        "output": "112",
-        "domain": "math"
+        "input": "Is the Louvre's pyramid known for being unbreakable?  Facts: The Pyramid at the Louvre is made of glass and metal. The Louvre Pyramid glass is 10mm thick. 10mm thick glass is not unbreakable."
     }
 ]
