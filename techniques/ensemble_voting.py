@@ -4,14 +4,15 @@ import concurrent.futures
 from collections import Counter
 from dotenv import load_dotenv
 import ast
-from self_refine import self_refine
-from tree_of_thought import tree_of_thought
-from chain_of_thought import chain_of_thought
-from decomposition import decomposition
-from tool_augmented import tool_augmented
-from prompt_optimization import prompt_optimized_call
-from self_consistency import self_consistency
-from react_agent import react_agent
+from techniques.self_refine import self_refinement
+from techniques.tree_of_thought import tree_of_thought
+from techniques.chain_of_thought import chain_of_thought
+from techniques.decomposition import decomposition
+from techniques.tool_augmented import tool_augmented
+from techniques.prompt_optimization import prompt_optimized_call
+from techniques.self_consistency import self_consistency
+from techniques.react_agent import react_agent
+from api_wrapper import call_model_chat_completions
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')
@@ -64,12 +65,14 @@ def calling_api(prompt: str, system: str, model: str, temperature: float, timeou
         return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
 
 def ensemble_vote(prompt: str,
-                   system: str = "You are a logical assistant. Your job is to classify the problem into EXACTLY one of the following domains: math, common_sense, coding, future_prediction, or planning.\nYour final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>",
-                   model: str = MODEL,
-                   temperature: float = 0.15,
-                   timeout: int = 180):
+                   domain: str = "common_sense",
+                   *,
+                    techniques_dict: dict | None = None,
+                  max_tokens: int = 1024,
+                  timeout: int = 120,
+                  **_ignored) -> dict:
     # First have to find domain of problem
-    first_call = calling_api(prompt, system, model, temperature, timeout, max_tokens=500)
+    first_call = call_model_chat_completions()
     domain = extract_answer(first_call["text"])
     answers_list = []
     max_tokens = 5000

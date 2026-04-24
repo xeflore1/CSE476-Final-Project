@@ -42,11 +42,15 @@ def decomposition(prompt: str,
     #hdrs   = dict(first_response.headers)
     #with concurrent.futures.ThreadPoolExecutor(max_workers = 3):
     #return first_response
-    subproblem_list = ast.literal_eval(first_response["text"])
+    try:
+        subproblem_list = ast.literal_eval(first_response["text"])
+    except Exception as e:
+        print(f"Exception Received for Parsing First Response in Decomposition: {e}")
+        subproblem_list = first_response["text"].split(',')
     new_system = "You are a logical assistant. Think step-by-step and answer the given question. You must answer in UTF-8. Output your answer concisely. Answer MUST be EXACTLY in the format \\boxed{answer}."
     max_tokens = 8000
     print(subproblem_list)
-    subq_ans = {}
+    #subq_ans = {}
     subproblem_response = ""
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
         futures = {threads.submit(calling_api, subq, new_system, model, temperature, timeout, max_tokens): subq for subq in subproblem_list}
@@ -93,6 +97,7 @@ def calling_api(prompt: str, system: str, model: str, temperature: float, timeou
             data = resp.json()
             text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
             return {"ok": True, "text": text, "raw": data, "status": status, "error": None, "headers": hdrs}
+        
         else:
             print("200 is NOT returned")
             err_text = None
