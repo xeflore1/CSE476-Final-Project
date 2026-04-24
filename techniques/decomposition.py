@@ -4,6 +4,7 @@ import concurrent.futures
 from collections import Counter
 from dotenv import load_dotenv
 import ast
+import call_model_chat_completions from api_wrapper
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')
