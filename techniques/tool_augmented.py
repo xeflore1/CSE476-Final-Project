@@ -4,7 +4,7 @@ from api_wrapper import call_model_chat_completions
 
 TOOL_PATTERN = re.compile(r"(Calculator|PythonExecutor)\[(.*?)\]")
 
-def tool_augmented(prompt: str) -> dict:
+def tool_augmented(prompt: str, domain: str = "common_sense", *, max_tokens: int = 1024, timeout: int = 120, **_ignored) -> dict:
     # basic tool reasoning flow:
     # ask model whether a tool is needed
     # if so, run the tool and pass result back
@@ -29,7 +29,9 @@ def tool_augmented(prompt: str) -> dict:
                 )
             },
             {"role": "user", "content": prompt}
-        ]
+        ],
+        max_tokens=max_tokens,
+        timeout=timeout
     )
 
     if not response["ok"]:
@@ -86,7 +88,9 @@ def tool_augmented(prompt: str) -> dict:
                     "Now give the final answer."
                 )
             }
-        ]
+        ],
+        max_tokens=max_tokens,
+        timeout=timeout
     )
 
     return {
