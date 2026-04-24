@@ -44,7 +44,6 @@ def react_agent(prompt: str,
 
         resp = call_model_chat_completions(
             messages=messages,
-            model=model,
             temperature=temperature,
             max_tokens=512,
             timeout=timeout

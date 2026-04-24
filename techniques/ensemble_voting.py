@@ -75,7 +75,7 @@ def ensemble_vote(prompt: str,
     max_tokens = 5000
     if domain == "math":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
+            cot_thread = threads.submit(chain_of_thought, prompt, temperature, timeout, max_tokens)
             decomp_thread = threads.submit(decomposition, prompt, model, temperature, timeout, max_tokens)
             tool_aug_thread = threads.submit(tool_augmented, prompt, model, temperature, timeout, max_tokens)
 
