@@ -1,5 +1,6 @@
 [
     {
-        "input": "Is the Louvre's pyramid known for being unbreakable?  Facts: The Pyramid at the Louvre is made of glass and metal. The Louvre Pyramid glass is 10mm thick. 10mm thick glass is not unbreakable."
-    }
+        "input": "What is 17*19?",
+        "domain": "math"
+      }
 ]

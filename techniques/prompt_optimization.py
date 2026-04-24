@@ -1,23 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-import requests
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).parent / ".env")
-import finalProject as final_project
-from techniques.output_instructions import output_instructions
-
+from api_wrapper import call_model_chat_completions, MODEL
+import output_instructions
 
 def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeout) -> dict:
 
     print(f"Prompt optimization is running with prompt: {prompt}\n")
-    url = f"{final_project.API_BASE}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {final_project.API_KEY}",
-        "Content-Type":  "application/json",
-    }
 
     def math_guidlines():
         return """
@@ -122,21 +110,9 @@ def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeou
     }
 
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
-        status = resp.status_code
-        hdrs   = dict(resp.headers)
-        if status == 200:
-            print("200 returned")
-            data = resp.json()
-            text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            return {"ok": True, "text": text, "raw": data, "status": status, "error": None, "headers": hdrs}
-        else:
-            print("200 is NOT returned")
-            err_text = None
-            try:
-                err_text = resp.json()
-            except Exception:
-                err_text = resp.text
-            return {"ok": False, "text": None, "raw": None, "status": status, "error": str(err_text), "headers": hdrs}
-    except requests.RequestException as e:
-        return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
+        res = call_model_chat_completions(payload, model=model, temperature=temperature, timeout=timeout)
+        if not res["ok"]:
+            return {"optimized": prompt, "calls": res.get("calls", 0)}
+        return {"optimized": res["text"], "calls": res["calls"]}
+    except Exception as e:
+        return {"optimized": prompt, "calls": 0, "error": str(e)}
