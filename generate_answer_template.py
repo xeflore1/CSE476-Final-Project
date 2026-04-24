@@ -25,9 +25,12 @@ from techniques.self_consistency import self_consistency
 # Load .env
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
+from agent_router import agent
 
-INPUT_PATH = Path(__file__).parent / "personal_inputs.json"
+INPUT_PATH = Path(__file__).parent / "cse_476_final_project_test_data.json"
 OUTPUT_PATH = Path(__file__).parent / "cse_476_final_project_answers.json"
+EXPECTED_COUNT = 6208
+MAX_OUTPUT_CHARS = 5000
     
 def load_questions(path: Path) -> List[Dict[str, Any]]:
     with path.open("r") as fp:
