@@ -48,11 +48,13 @@ def ensemble_vote(prompt: str,
     max_tokens = 5000
     techniques_to_be_used = DOMAIN_TO_TECHNIQUES[domain]
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-        thread = [threads.submit(DOMAIN_TO_TECHNIQUES[i], prompt, domain, max_tokens, timeout) for i in techniques_to_be_used]
+        thread = [threads.submit(i, prompt=prompt, domain=domain, max_tokens=max_tokens, timeout=timeout) for i in techniques_to_be_used]
         #Process threads
         for a in thread:
             try:
-                answers_list.append(a.result())
+                #answers_list.append(a.result())
+                tech_answer = a.result()
+                answers_list.append(tech_answer.get("answer") or tech_answer.get("text"))
             except Exception as e:
                 print(f"Answer Failed in Ensemble Voting: {e}")
 
