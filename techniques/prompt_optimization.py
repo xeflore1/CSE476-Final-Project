@@ -98,19 +98,18 @@ def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeou
     }
     guide_fn = domain_prompts.get(domain, common_sense_guidlines)
     system_content = (guide_fn().strip() + "\n\n" + output_instructions(domain)).strip()
-    payload = {
-        "model": model,
-        "messages": [
+    # payload = {
+    #     "temperature": temperature,
+    #     "max_tokens": max_tokens,
+    #     "frequency_penalty": 0.0,
+    # }
+
+    messages = [
             {"role": "system", "content": system_content},
             {"role": "user",   "content": prompt},
-        ],
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "frequency_penalty": 0.0,
-    }
-
+    ]
     try:
-        res = call_model_chat_completions(payload, model=model, temperature=temperature, timeout=timeout)
+        res = call_model_chat_completions(messages=messages, temperature=temperature, frequency_penalty=0.0, max_tokens=max_tokens, timeout=timeout)
         if not res["ok"]:
             return {"optimized": prompt, "calls": res.get("calls", 0)}
         return {"optimized": res["text"], "calls": res["calls"]}

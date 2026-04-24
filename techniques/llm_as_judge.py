@@ -11,17 +11,21 @@ _CONFIDENCE_SYS = (
 
 
 def _chat(system, user, model, temperature):
-    payload = {
-        "model": model,
-        "messages": [
+    # payload = {
+    #     "model": model,
+    #     "messages": [
+    #         {"role": "system", "content": system},
+    #         {"role": "user", "content": user},
+    #     ],
+    #     "temperature": temperature,
+    #     "max_tokens": JUDGE_MAX_TOKENS,
+    # }
+    messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
-        ],
-        "temperature": temperature,
-        "max_tokens": JUDGE_MAX_TOKENS,
-    }
+    ]
     try:
-        res = call_model_chat_completions(payload, model=model, temperature=temperature, timeout=120)
+        res = call_model_chat_completions(messages=messages, temperature=temperature, max_tokens=JUDGE_MAX_TOKENS, timeout=120)
         if not res["ok"]:
             return {"ok": False, "text": None}
         return {"ok": True, "text": res["text"]}
