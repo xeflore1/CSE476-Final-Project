@@ -12,13 +12,19 @@ from techniques.tool_augmented import tool_augmented
 from techniques.prompt_optimization import prompt_optimized_call
 from techniques.self_consistency import self_consistency
 from techniques.react_agent import react_agent
-from api_wrapper import call_model_chat_completions
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')
 API_BASE = os.getenv("API_BASE", "https://openai.rc.asu.edu/v1")
 MODEL    = os.getenv("MODEL_NAME", "qwen3-30b-a3b-instruct-2507")
 
+DOMAIN_TO_TECHNIQUES = {
+    "math": [chain_of_thought, decomposition, tool_augmented],
+    "common_sense": [chain_of_thought, self_refinement, prompt_optimized_call],
+    "coding": [react_agent, chain_of_thought, self_refinement],
+    "future_prediction": [chain_of_thought, self_consistency, prompt_optimized_call],
+    "planning": [decomposition, chain_of_thought, tree_of_thought]
+}
 def extract_answer(text: str) -> str: # Helper function to extract answer from a models responce.
     if not text:
         return None
@@ -28,41 +34,7 @@ def extract_answer(text: str) -> str: # Helper function to extract answer from a
         return match.group(1).strip()
     else:
         return None
-
-def calling_api(prompt: str, system: str, model: str, temperature: float, timeout: int, max_tokens: int):
-    url = f"{API_BASE}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type":  "application/json",
-    }
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user",   "content": prompt}
-        ],
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-    }
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
-        status = resp.status_code
-        hdrs   = dict(resp.headers)
-        if status == 200:
-            print("200 returned")
-            data = resp.json()
-            text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            return {"ok": True, "text": text, "raw": data, "status": status, "error": None, "headers": hdrs}
-        else:
-            print("200 is NOT returned")
-            err_text = None
-            try:
-                err_text = resp.json()
-            except Exception:
-                err_text = resp.text
-            return {"ok": False, "text": None, "raw": None, "status": status, "error": str(err_text), "headers": hdrs}
-    except requests.RequestException as e:
-        return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
+        #return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
 
 def ensemble_vote(prompt: str,
                    domain: str = "common_sense",
@@ -71,76 +43,14 @@ def ensemble_vote(prompt: str,
                   max_tokens: int = 1024,
                   timeout: int = 120,
                   **_ignored) -> dict:
-    # First have to find domain of problem
-    first_call = call_model_chat_completions()
-    domain = extract_answer(first_call["text"])
     answers_list = []
     max_tokens = 5000
-    if domain == "math":
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, temperature, timeout, max_tokens)
-            decomp_thread = threads.submit(decomposition, prompt, model, temperature, timeout, max_tokens)
-            tool_aug_thread = threads.submit(tool_augmented, prompt, model, temperature, timeout, max_tokens)
-
-            answers_list.append(cot_thread.result())
-            answers_list.append(decomp_thread.result())
-            answers_list.append(tool_aug_thread.result())
-        answers_list = [x for x in answers_list if x is not None]
-        if not answers_list:
-            return {'ok': False, 'text': "No answer could be found"}
-        else:
-            counter_object = Counter(answers_list)
-            return {'ok': True, "text": counter_object.most_common()[0][0]}
-        
-    elif domain == "common_sense":
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
-            self_refine_thread = threads.submit(self_refinement, prompt, model, temperature, timeout, max_tokens)
-            prompt_opt_thread = threads.submit(prompt_optimized_call, prompt,  model, temperature, timeout, max_tokens)
-
-            answers_list.append(cot_thread.result())
-            answers_list.append(self_refine_thread.result())
-            answers_list.append(prompt_opt_thread.result())
-            answers_list = [x for x in answers_list if x is not None]
-        if not answers_list:
-            return {'ok': False, 'text': "No answer could be found"}
-        else:
-            counter_object = Counter(answers_list)
-            return {'ok': True, 'text': counter_object.most_common()[0][0]}
-        
-    elif domain == "coding":
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            react_thread = threads.submit(react_agent, prompt, model, temperature, timeout, max_tokens)
-            cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
-            self_refine_thread = threads.submit(self_refinement, prompt, model, temperature, timeout, max_tokens)
-
-            answers_list.append(react_thread.result())
-            answers_list.append(cot_thread.result())
-            answers_list.append(self_refine_thread.result())
-            answers_list = [x for x in answers_list if x is not None]
-        if not answers_list:
-            return {'ok': False, 'text': "No answer could be found"}
-        else:
-            counter_object = Counter(answers_list)
-            return {'ok': True, 'text': counter_object.most_common()[0][0]}
-        
-    elif domain == "future_prediction":
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-            cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
-            self_con_thread = threads.submit(self_consistency, prompt, model, temperature, timeout, max_tokens)
-            prompt_opt_thread = threads.submit(prompt_optimized_call, prompt, model, temperature, timeout, max_tokens)
-
-            answers_list.append(cot_thread.result())
-            answers_list.append(self_con_thread.result())
-            answers_list.append(prompt_opt_thread.result())
-            answers_list = [x for x in answers_list if x is not None]
-        if not answers_list:
-            return {'ok': False, 'text': "No answer could be found"}
-        else:
-            counter_object = Counter(answers_list)
-            return {'ok': True, 'text': counter_object.most_common()[0][0]}
-        
-    elif domain == "planning":
+    techniques_to_be_used = DOMAIN_TO_TECHNIQUES[domain]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
+        thread = [threads.submit(DOMAIN_TO_TECHNIQUES[i], prompt, domain, max_tokens, timeout) for i in techniques_to_be_used]
+        #Process threads
+        answers_list = [a.result() for a in thread]   
+    if domain == "planning":
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
             decomp_thread = threads.submit(decomposition, prompt, model, temperature, timeout, max_tokens)
             cot_thread = threads.submit(chain_of_thought, prompt, model, temperature, timeout, max_tokens)
