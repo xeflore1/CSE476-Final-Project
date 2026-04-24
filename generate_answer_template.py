@@ -7,6 +7,7 @@ before submitting so the ``output`` fields contain your real predictions.
 Reads the input questions from cse_476_final_project_test_data.json and writes
 an answers JSON file where each entry contains a string under the "output" key.
 """
+
 from __future__ import annotations
 
 import json
@@ -49,13 +50,22 @@ def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         # answers.append({"output": modelAnswer or ""})
 
         # call self-consistency
-        print(f"***** idx: {idx}, question: {question['input']} *****\n")
-        result = self_consistency(question["input"])
-        print(f"***** result: {result} *****\n")
+    #    print(f"***** idx: {idx}, question: {question['input']} *****\n")
+    #    result = final_project.self_consistency(question["input"])
+    #    print(f"***** result: {result} *****\n")
         # print("OK:", result["ok"], "HTTP:", result["status"])
         # print("MODEL SAYS:", (result["text"] or "").strip())
-        answers.append({"output": result})
+    #    answers.append({"output": result})
 
+        # calling Tool Augmented reasoning for now
+        print(f"***** idx: {idx}, question: {question['input']} *****\n")
+
+        result = final_project.tool_augmented_reasoning(question["input"])
+
+        print(f"***** result: {result} *****\n")
+
+        # return string (this is important)
+        answers.append({"output": result.get("text") or ""})
     return answers
 
 
