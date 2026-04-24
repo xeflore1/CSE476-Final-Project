@@ -4,7 +4,8 @@ import concurrent.futures
 from collections import Counter
 from dotenv import load_dotenv
 import ast
-from dev2techniques import self_refinement, tree_of_thought
+from self_refine import self_refine
+from tree_of_thought import tree_of_thought
 from chain_of_thought import chain_of_thought
 from decomposition import decomposition
 from tool_augmented import tool_augmented
@@ -62,7 +63,7 @@ def calling_api(prompt: str, system: str, model: str, temperature: float, timeou
     except requests.RequestException as e:
         return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
 
-def ensemble_voting(prompt: str,
+def ensemble_vote(prompt: str,
                    system: str = "You are a logical assistant. Your job is to classify the problem into EXACTLY one of the following domains: math, common_sense, coding, future_prediction, or planning.\nYour final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>",
                    model: str = MODEL,
                    temperature: float = 0.15,

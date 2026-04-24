@@ -15,8 +15,6 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 from utils import extract_answer
-from technique.chain_of_thought import chain_of_thought
-from technique.self_consistency import self_consistency
 import json
 from pathlib import Path
 from typing import Any, Dict, List
