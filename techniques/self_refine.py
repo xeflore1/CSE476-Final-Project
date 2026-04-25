@@ -2,7 +2,7 @@ from api_wrapper import call_model_chat_completions, MODEL
 from utils import extract_answer
 
 def self_refine(prompt: str, domain: str = "", system: str = "You are a helpful assistant ready to answer a question.", model: str = MODEL, temperature: float = 0.0,
-                 timeout: int = 60, max_iterations: int = 1,) -> dict:
+                 timeout: int = 60, max_iterations: int = 1, max_tokens: int = 2048, **_ignored) -> dict:
     transcript = []
     def ask(user_prompt: str):
         try:
@@ -12,7 +12,7 @@ def self_refine(prompt: str, domain: str = "", system: str = "You are a helpful 
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=temperature,
-                max_tokens=2048,
+                max_tokens=max_tokens,
                 timeout=timeout,
                 model=model,
             )
