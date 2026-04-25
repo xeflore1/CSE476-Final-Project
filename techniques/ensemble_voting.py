@@ -30,12 +30,25 @@ techniques_call_cost = {
     "chain_of_thought": 1, "tool_augmented": 2, "self_refine": 3, "react_agent": 3, "self_consistency": 4, "tree_of_thought": 4, "decomposition": 5
 }
 
-def plan_for_budget(domain: str, budget: int) -> list[str]:
+def plan_for_budget(domain: str, budget: int) -> list[str] | None:
     ideal = DOMAIN_TO_TECHNIQUES.get(domain, DOMAIN_TO_TECHNIQUES["common_sense"])
     ideal_cost = [techniques_call_cost[i] for i in ideal_cost]
     if sum(ideal_cost) <= budget:
         return ideal
-    sorted_techniques_cost = OrderedDict(sorted(techniques_call_cost.items()), key=lambda item: item[1])
+    sorted_techniques_cost = {key: value for key, value in sorted(techniques_call_cost.items(), key=lambda item: item[1])}
+    acc = 0
+    new_list_techniques = []
+    for a in sorted_techniques_cost:
+        if acc + techniques_call_cost[a] < budget:
+            break
+        else:
+            acc += techniques_call_cost[a]
+            new_list_techniques.append(a)
+
+    if new_list_techniques:
+        return new_list_techniques
+    else:
+        return None
 def extract_answer(text: str) -> str: # Helper function to extract answer from a models responce.
     if not text:
         return None
