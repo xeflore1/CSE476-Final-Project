@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from api_wrapper import call_model_chat_completions, MODEL
-import output_instructions
+from techniques.output_instructions import output_instructions
 
 def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeout) -> dict:
 

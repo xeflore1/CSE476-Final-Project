@@ -4,6 +4,7 @@ import concurrent.futures
 from collections import Counter
 from dotenv import load_dotenv
 import ast
+from api_wrapper import call_model_chat_completions
 load_dotenv()
 
 API_KEY  = os.getenv('API-KEY')
@@ -21,40 +22,67 @@ def extract_answer(text: str) -> str: # Helper function to extract answer from a
         return None
     
 def decomposition(prompt: str,
-                   system: str = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem.\n You must answer in UTF-8.\n Each subproblem must be independent of each other (can be solved parallelly) and easy-to-merge with other solutions.\n The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]",
-                   model: str = MODEL,
-                   temperature: float = 0.15,
-                   timeout: int = 180):
+                domain: str = "common_sense",
+                *,
+                model: str = MODEL,
+                temperature: float = 0.2,
+                max_steps: int = 3,
+                max_tokens: int = 512,
+                timeout: int = 60,
+                **_ignored):
     """
     Calls an OpenAI-style /v1/chat/completions endpoint and returns:
     { 'ok': bool, 'text': str or None, 'raw': dict or None, 'status': int, 'error': str or None, 'headers': dict }
     """
-    max_tokens = 300
-    first_response = calling_api(prompt, system, model, temperature, timeout, max_tokens)
+    print("Running with Decomposition Now")
+    max_tokens = 2000
+    my_system = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem.\n You must answer in UTF-8.\n Each subproblem must be independent of each other (can be solved parallelly) and easy-to-merge with other solutions.\n The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]"
+    messages = [
+            {"role": "system", "content": my_system},
+            {"role": "user",   "content": prompt},
+    ]
+    first_response = call_model_chat_completions(messages=messages, temperature=temperature, frequency_penalty=0.0, max_tokens=max_tokens, timeout=timeout)
     #first_response = requests.post(url, headers=headers, json=payload, timeout=timeout)
     #status = first_response.status_code
     #hdrs   = dict(first_response.headers)
     #with concurrent.futures.ThreadPoolExecutor(max_workers = 3):
     #return first_response
-    subproblem_list = ast.literal_eval(first_response["text"])
+    try:
+        subproblem_list = ast.literal_eval(first_response["text"])
+    except Exception as e:
+        print(f"Exception Received for Parsing First Response in Decomposition: {e}")
+        subproblem_list = first_response["text"].split(',')
     new_system = "You are a logical assistant. Think step-by-step and answer the given question. You must answer in UTF-8. Output your answer concisely. Answer MUST be EXACTLY in the format \\boxed{answer}."
     max_tokens = 8000
-    print(subproblem_list)
+    print("Original List of Subproblems:\n" + str(subproblem_list))
+    #subq_ans = {}
+    subproblem_response = ""
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-        futures = {threads.submit(calling_api, subproblem, new_system, model, temperature, timeout, max_tokens) for subproblem in subproblem_list}
-        subproblem_response = ""
+        futures = {threads.submit(calling_api, subq, new_system, model, temperature, timeout, max_tokens): subq for subq in subproblem_list}
         for i in concurrent.futures.as_completed(futures):
+            subq = futures[i]
             try:
-                subproblem_response = subproblem_response + "Subproblem:\n" + subproblem_list[i] + i.result()["text"] + "\n"
-
+                subproblem_response = subproblem_response + "Subproblem:\n" + subq + "Answer:\n" + i.result()["text"] + "\n"
             except Exception as error:
                 print("Exception:", error)
+                
     print("Subproblem Response + Context after Completion:", subproblem_response)
     new_system = "You have been provided with 3 subproblems, 3 sub-solutions to those subproblems, and the original problem. Your task is to output a combine solution using each sub-solution provided to you."
-    final_prompt = "Question: " + prompt + "\n" + "The following 3 answers are the answers to each subproblem:\n" + subproblem_response + "\n\nCombine all of these sub-solutions into a final solution to the question\n" + "Your final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>"
+    final_prompt = "Original Question: " + prompt + "\n\n" + "The following are 3 subproblems and the corresponding answers to each subproblem:\n" + subproblem_response + "\n\nCombine all of these sub-solutions into a final solution to the question\n" + "Your final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>"
     max_tokens = 8000
-    last_response = calling_api(final_prompt, new_system, model, temperature, timeout, max_tokens)
-    return last_response
+    messages = [
+            {"role": "system", "content": new_system},
+            {"role": "user",   "content": final_prompt},
+    ]
+    last_response = call_model_chat_completions(messages=messages, temperature=temperature, frequency_penalty=0.0, max_tokens=max_tokens, timeout=timeout)
+    return {
+        "ok": True,
+        "text": last_response['text'][:30],
+        #"answer": "",
+        "answer": extract_answer(last_response['text']),
+        "calls": 5,
+        "error": None
+    }
 
     
 
@@ -85,6 +113,7 @@ def calling_api(prompt: str, system: str, model: str, temperature: float, timeou
             data = resp.json()
             text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
             return {"ok": True, "text": text, "raw": data, "status": status, "error": None, "headers": hdrs}
+        
         else:
             print("200 is NOT returned")
             err_text = None

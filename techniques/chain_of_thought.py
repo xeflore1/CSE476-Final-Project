@@ -17,6 +17,7 @@ def chain_of_thought(prompt: str,
                      temperature: float = 0.3,
                      timeout: int = 120,
                      max_tokens: int = 8000,
+                     **_ignored
                      ) -> dict:
 
     print(f"COT is running with prompt: {prompt}\n")
