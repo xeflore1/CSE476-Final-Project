@@ -111,7 +111,7 @@ def prompt_optimized_call(prompt, domain, model, temperature, max_tokens, timeou
     try:
         res = call_model_chat_completions(messages=messages, temperature=temperature, frequency_penalty=0.0, max_tokens=max_tokens, timeout=timeout)
         if not res["ok"]:
-            return {"optimized": prompt, "calls": res.get("calls", 0)}
-        return {"optimized": res["text"], "calls": res["calls"]}
+            return {"optimized": prompt, "calls": res.get("calls", 1)}
+        return {"optimized": res["text"], "calls": res.get("calls", 1)}
     except Exception as e:
         return {"optimized": prompt, "calls": 0, "error": str(e)}

@@ -88,19 +88,13 @@ def comparative_judge(question, candidates, model, temperature=0.0) -> int:
     return _parse_choice(r.get("text"), n)
 
 def confidence_check(question, answer, *, model=MODEL, temperature=0.0) -> dict:
-    payload = {
-        "model": model,
-        "messages": [
+    res = call_model_chat_completions(
+        messages=[
             {"role": "system", "content": _CONFIDENCE_SYS},
             {"role": "user", "content": f"Q: {question}\nA: {answer}"},
         ],
-        "temperature": temperature,
-        "max_tokens": 8,
-    }
-    try:
-        res = call_model_chat_completions(payload, model=model, temperature=temperature, timeout=120)
-    except Exception as e:
-        return {"ok": False, "level": "medium", "calls": 0, "error": str(e)}
+        model=model, temperature=temperature, max_tokens=8, timeout=120,
+    )
     text = (res.get("text") or "").strip().lower()
     if "high" in text or text.startswith(("4", "5")):
         level = "high"
