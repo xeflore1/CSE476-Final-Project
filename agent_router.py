@@ -72,7 +72,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
             primary_fn,
             optimized,
             domain,
-            max_tokens=min(1024, 50 * max(1, BUDGET_PER_QUESTION - calls_used)),
+            max_tokens=_TOK.get(domain, 1024),
         )
         calls_used += c
         if verbose:
