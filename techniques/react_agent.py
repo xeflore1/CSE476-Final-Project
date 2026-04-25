@@ -92,7 +92,7 @@ def react_agent(prompt: str,
             observation = f"Observation: {obs}"
             print(observation)
 
-            # observation must be from user role
+
             history.append({"role": "user", "content": observation})
 
     return {
