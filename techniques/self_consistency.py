@@ -1,16 +1,11 @@
-import os, concurrent.futures
+import concurrent.futures
 from collections import Counter
-from dotenv import load_dotenv
 from utils import extract_answer
 from techniques.chain_of_thought import chain_of_thought
-load_dotenv()
-
-API_KEY  = os.getenv('API-KEY')
-API_BASE = os.getenv("API_BASE", "https://openai.rc.asu.edu/v1")
-MODEL    = os.getenv("MODEL_NAME", "qwen3-30b-a3b-instruct-2507")
 
 # Self-consistency algorithm
 def self_consistency(prompt: str,
+                     domain: str = "common_sense",
                      system: str = (
                         "You are a logical assistant. Think step-by-step and answer the given question."
                         "Your final answer MUST end with this exact format:\n"
@@ -18,24 +13,41 @@ def self_consistency(prompt: str,
                         "<DONE>"
                      ),
                      temperature: float = 0.5, # increase temp so that model explores different logical approaches
+                     max_tokens: int = 1024,
+                     timeout: int = 120,
+                     n_samples: int = 4,
+                     **_ignored
                     ):
 
     # Run chain of thought 4 times and pick the most frequent answer
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {executor.submit(chain_of_thought, prompt=prompt, system=system, temperature=temperature) for i in range(4)}
-        responses = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_samples) as executor:
+        futures = {
+            executor.submit(
+                chain_of_thought, prompt, domain,
+                system=system,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                timeout=timeout
+            ) for i in range(n_samples)
+        }
+        results = []
+        calls_total = 0
         for future in concurrent.futures.as_completed(futures):
             response = future.result()
-            if response["ok"]:
-                answer = extract_answer(response["text"])
+            results.append(response)
+            calls_total += response.get("calls", 0)
+        responses = []
+        for response in results:
+            if response.get("ok"):
+                answer = response.get("answer") or extract_answer(response.get("text", ""))
                 responses.append(answer)
         print(f"Responses: {responses}")
-        filteredList = [x for x in responses if x is not None] # get rid of None entries
+        filteredList = [x for x in responses if x is not None and str(x).strip() != ""] # get rid of None/empty entries
         print(f"filered list: {filteredList}")
         if not filteredList:
-            return None
+            return {"ok": False, "text": None, "answer": "", "calls": calls_total, "error": "no valid samples"}
         else:
             counts = Counter(filteredList)
             most_common_val = counts.most_common(1)[0][0] # find the most common answer
-            return most_common_val # return the most common answer
+            return {"ok": True, "text": most_common_val, "answer": most_common_val, "calls": calls_total, "error": None} # return the most common answer
                 
