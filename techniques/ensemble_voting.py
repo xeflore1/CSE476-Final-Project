@@ -20,9 +20,9 @@ MODEL    = os.getenv("MODEL_NAME", "qwen3-30b-a3b-instruct-2507")
 
 DOMAIN_TO_TECHNIQUES = {
     "math": ["chain_of_thought", "decomposition", "tool_augmented"],
-    "common_sense": ["chain_of_thought", "self_refine", "prompt_optimized_call"],
+    "common_sense": ["chain_of_thought", "self_refine", "self_consistency"],
     "coding": ["react_agent", "chain_of_thought", "self_refine"],
-    "future_prediction": ["chain_of_thought", "self_consistency", "prompt_optimized_call"],
+    "future_prediction": ["chain_of_thought", "self_consistency", "self_consistency"],
     "planning": ["decomposition", "chain_of_thought", "tree_of_thought"]
 }
 
@@ -32,23 +32,21 @@ techniques_call_cost = {
 
 def plan_for_budget(domain: str, budget: int) -> list[str] | None:
     ideal = DOMAIN_TO_TECHNIQUES.get(domain, DOMAIN_TO_TECHNIQUES["common_sense"])
-    ideal_cost = [techniques_call_cost[i] for i in ideal_cost]
-    if sum(ideal_cost) <= budget:
+    ideal_cost = sum(techniques_call_cost.get(i, 99) for i in ideal)
+    if ideal_cost <= budget:
         return ideal
-    sorted_techniques_cost = {key: value for key, value in sorted(techniques_call_cost.items(), key=lambda item: item[1])}
-    acc = 0
-    new_list_techniques = []
-    for a in sorted_techniques_cost:
-        if acc + techniques_call_cost[a] < budget:
-            break
-        else:
-            acc += techniques_call_cost[a]
-            new_list_techniques.append(a)
 
-    if new_list_techniques:
-        return new_list_techniques
-    else:
-        return None
+    # fallback: pick the cheapest techniques that fit
+    sorted_techs = sorted(techniques_call_cost.items(), key=lambda kv: kv[1])
+    acc, picked = 0, []
+    for name, cost in sorted_techs:
+        if acc + cost > budget:
+            continue
+        acc += cost
+        picked.append(name)
+        if len(picked) >= 3:
+            break
+    return picked or None
     
 
 
@@ -63,15 +61,14 @@ def ensemble_vote(prompt: str,
     print("Running Ensemble Voting Now")
     techniques_dict = techniques_dict or {}
     budget_calls = plan_for_budget(domain, budget)
-    tech_functions = [techniques_dict[i] for i in budget_calls]
+    tech_functions = [techniques_dict[n] for n in (budget_calls or []) if n in techniques_dict]
     if not tech_functions:
         return {
         "ok": False,
         "text": None,
-        #"answer": "",
-        "answer": None,
-        "calls": None,
-        "error": "Could not run any techniques due to limited budget"
+        "answer": "",
+        "calls": 0,
+        "error": "no usable techniques in techniques_dict"
     }
     answers_list = []
     max_tokens = 5000
@@ -96,5 +93,5 @@ def ensemble_vote(prompt: str,
         return {"ok": False, "text": None, "raw": None, "status": -1, "error": None, "headers": {}}
     else:
         answer = Counter(answers_list).most_common(1)[0][0]
-        return {"ok": True, "text": answer, 'answer': answer, "error": None}
+        return {"ok": True, "text": answer, "answer": answer, "calls": calls, "error": None}
     

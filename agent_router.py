@@ -1,5 +1,7 @@
 """Agent router / orchestrator. Entry point: agent(prompt)."""
 
+import re
+
 from domain_classifier import classify_domain
 from techniques.prompt_optimization import prompt_optimized_call
 from techniques.llm_as_judge import confidence_check
@@ -51,28 +53,46 @@ def _run_counted(fn, *args, **kwargs):
 
 _TOK = {"math": 256, "common_sense": 256, "coding": 1024, "future_prediction": 256, "planning": 512}
 
+# Domains whose prompts have rigid formatting (action lists, \boxed{...} templates,
+# multiple-choice letter grids, etc.). Paraphrasing them loses the format hints,
+# so we skip the prompt optimizer and pass the original prompt straight through.
+_SKIP_OPTIMIZER = {"planning", "future_prediction"}
+
+
+def _postprocess_answer(domain: str, ans: str) -> str:
+    # Planning domain: when the model emits '[PLAN] ... [PLAN END]', return only
+    # the body of the (last) plan block. Falls back to the unchanged answer.
+    if domain == "planning" and ans:
+        m = re.search(r"\[PLAN\]\s*(.*?)\s*\[PLAN END\]", ans, re.DOTALL)
+        if m and m.group(1).strip():
+            return m.group(1).strip()
+    return ans
+
 
 def agent(prompt: str, *, verbose: bool = False) -> str:
     try:
         calls_used = 0
         domain = classify_domain(prompt)
-        opt = prompt_optimized_call(
-            prompt,
-            domain,
-            MODEL,
-            0.0,
-            _TOK.get(domain, 256),
-            180,
-        )
-        calls_used += opt.get("calls", 0)
-        optimized = opt.get("optimized") or prompt
+        if domain in _SKIP_OPTIMIZER:
+            optimized = prompt
+        else:
+            opt = prompt_optimized_call(
+                prompt,
+                domain,
+                MODEL,
+                0.0,
+                _TOK.get(domain, 256),
+                180,
+            )
+            calls_used += opt.get("calls", 0)
+            optimized = opt.get("optimized") or prompt
         primary_name = _DEFAULT_FIRST.get(domain, "chain_of_thought")
         primary_fn = TECHNIQUES[primary_name]
         ans, c, _ = _run_counted(
             primary_fn,
             optimized,
             domain,
-            max_tokens=min(1024, 50 * max(1, BUDGET_PER_QUESTION - calls_used)),
+            max_tokens=_TOK.get(domain, 1024),
         )
         calls_used += c
         if verbose:
@@ -116,6 +136,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
             print(f"[router] final_calls={calls_used}")
         if ans is None:
             ans = ""
+        ans = _postprocess_answer(domain, ans)
         if len(ans) > 4900:
             ans = ans[:4900]
         return ans
