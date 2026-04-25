@@ -33,6 +33,14 @@ _DEFAULT_FIRST = {
 }
 
 BUDGET_PER_QUESTION = 20
+ENSEMBLE_COST = {
+    "math": 8,
+    "common_sense": 8,
+    "coding": 6,
+    "future_prediction": 9,
+    "planning": 10,
+}
+SAFETY_MARGIN = 1
 
 
 def _run_counted(fn, *args, **kwargs):
@@ -74,11 +82,27 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
             calls_used += confidence.get("calls", 0)
             if confidence.get("level") == "low":
                 remaining = BUDGET_PER_QUESTION - calls_used
-                if remaining >= 6:
+                need = ENSEMBLE_COST.get(domain, 8) + SAFETY_MARGIN
+                if remaining >= need:
                     ens = ensemble_vote(
                         optimized,
                         domain,
                         techniques_dict=TECHNIQUES,
+                        budget=remaining - SAFETY_MARGIN,
+                        max_tokens=_TOK.get(domain, 1024),
+                        timeout=180,
+                    )
+                    calls_used += ens.get("calls", 0)
+                    if ens.get("ok") and ens.get("answer"):
+                        ans = ens["answer"]
+                elif remaining >= 4:
+                    ens = ensemble_vote(
+                        optimized,
+                        domain,
+                        techniques_dict=TECHNIQUES,
+                        budget=remaining - SAFETY_MARGIN,
+                        max_tokens=_TOK.get(domain, 1024),
+                        timeout=180,
                     )
                     calls_used += ens.get("calls", 0)
                     if ens.get("ok") and ens.get("answer"):
@@ -96,7 +120,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
             ans = ans[:4900]
         return ans
     except Exception as e:
-        return f"Error Generated: {e}"
+        return f"ERROR: {e}"
 
 
 if __name__ == "__main__":
