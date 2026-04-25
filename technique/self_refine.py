@@ -4,6 +4,8 @@ from dotenv import load_dotenv;
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 print(repr(API_KEY))
+from api_wrapper import call_model_chat_completions
+from utils import extract_answer
 
 
 API_BASE = os.getenv("API_BASE", "https://openai.rc.asu.edu/v1")  
@@ -48,8 +50,20 @@ def ask(prompt, system: str ="You are a helpful assistant ready to answer a ques
     except requests.RequestException as e:
         return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
     
-def self_refinement(prompt: str) -> dict:
-    answer1 = ask(prompt)
-    feedback1 = ask("Give your critique of this answer:\n\n" + (answer1["text"] or ""))
-    answer2 = ask("using this critique, give a better answer to the original question:\n\n" + feedback1["text"] or "")
-    return {"answer1": answer1, "feedback1": feedback1, "answer2": answer2}
+def self_refine(prompt: str, domain: str = "", max_iterations: int = 1) -> dict:
+    transcript= []
+    i = 0
+    answer1 = ask(prompt)["text"]
+    for i in range(max_iterations):
+        feedback = ask(f"Give your critique of this answer:\n\n {answer1}")["text"]
+        answer2 = ask(f"""I will give you the original question, an answer, and a critique. Please give a better answer to the original question using the
+                      insight from the critique.
+                      Question: {prompt}
+                      Original Answer: {answer1}
+                      Critique: {feedback}""")["text"]
+        
+        transcript.append({"answer": answer1, "feedback": feedback, "improved answer": answer2})
+        i += 1
+        answer1 = answer2
+    
+    return {"final answer": answer1, "transcript": transcript}
