@@ -23,12 +23,3 @@ def execute_python(code: str) -> str:
         return out if out else str({k: v for k, v in local_env.items() if not k.startswith("_")})
     except Exception as e:
         return f"EXEC_ERROR: {type(e).__name__}: {e}"
-#so calc does math; however, this is for logic loops that are needed in ReAct
-
-def execute_python(code: str) -> str:
-    try:
-        local_env = {}
-        exec(code, {"__builtins__": {}}, local_env)
-        return str(local_env)
-    except Exception as e:
-        return f"EXEC_ERROR: {str(e)}"
