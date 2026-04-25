@@ -16,8 +16,11 @@ _MATH = re.compile(
     r"|\\(?:frac|sqrt|boxed|sum|prod|int|cdot|times|leq|geq|neq)"
     r"|\b(?:AMC|AIME|IMO)\b"
     r"|\b\d+\s*[\+\-\*/×÷=]\s*\d+"
-    r"|\b(?:find|solve|compute|evaluate|determine)\b.{0,80}"
-    r"\b(?:value|sum|product|probability|equation|integer|root|area|volume|angle|length)\b",
+    r"|\b(?:find|solve|compute|evaluate|determine|calculate|what is the largest|what is the smallest|how many)\b.{0,80}"
+    r"\b(?:value|sum|product|probability|equation|integer|integers|root|area|volume|angle|length|ratio|percent|percentage|fraction|digits|remainder|divisible|prime|matches|number of)\b"
+    r"|\b(?:ratio|percentage|remainder|divisible|prime)\b.{0,60}\b(?:is|was|will|equal)\b"
+    r"|\bwin(?:\s+)?ratio\b"
+    r"|\bmod(?:ulo)?\s+\d+\b",
     re.IGNORECASE,
 )
 
