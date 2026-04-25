@@ -49,36 +49,46 @@ def plan_for_budget(domain: str, budget: int) -> list[str] | None:
         return new_list_techniques
     else:
         return None
-def extract_answer(text: str) -> str: # Helper function to extract answer from a models responce.
-    if not text:
-        return None
-    # Extract answer from the format: \\boxed{answer}
-    match = re.search(r"\\boxed\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}", text)
-    if match:
-        return match.group(1).strip()
-    else:
-        return None
-        #return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}}
+    
+
 
 def ensemble_vote(prompt: str,
                    domain: str = "common_sense",
                    *,
                     techniques_dict: dict | None = None,
+                    budget: int = 4,
                   max_tokens: int = 1024,
                   timeout: int = 120,
                   **_ignored) -> dict:
     print("Running Ensemble Voting Now")
+    techniques_dict = techniques_dict or {}
+    budget_calls = plan_for_budget(domain, budget)
+    tech_functions = [techniques_dict[i] for i in budget_calls]
+    if not tech_functions:
+        return {
+        "ok": False,
+        "text": None,
+        #"answer": "",
+        "answer": None,
+        "calls": None,
+        "error": "Could not run any techniques due to limited budget"
+    }
     answers_list = []
     max_tokens = 5000
-    techniques_to_be_used = DOMAIN_TO_TECHNIQUES[domain]
+    # Finally running threads of each technique
+    calls = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-        thread = [threads.submit(i, prompt=prompt, domain=domain, max_tokens=max_tokens, timeout=timeout) for i in techniques_to_be_used]
+        thread = {threads.submit(func, prompt=prompt, domain=domain, max_tokens=max_tokens, timeout=timeout): func for func in tech_functions}
         #Process threads
         for a in thread:
             try:
                 #answers_list.append(a.result())
                 tech_answer = a.result()
-                answers_list.append(tech_answer.get("answer") or tech_answer.get("text"))
+                calls += tech_answer.get("calls", 0)
+                if tech_answer.get("ok"):
+                    answers_list.append(tech_answer.get("answer") or tech_answer.get("text"))
+                else:
+                    answers_list.append(tech_answer.get("error"))
             except Exception as e:
                 print(f"Answer Failed in Ensemble Voting: {e}")
 
