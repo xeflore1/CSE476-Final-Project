@@ -5,6 +5,7 @@ import re
 from domain_classifier import classify_domain
 from techniques.prompt_optimization import prompt_optimized_call
 from techniques.llm_as_judge import confidence_check
+from techniques.output_instructions import output_instructions
 
 from techniques.chain_of_thought import chain_of_thought
 from techniques.self_consistency import self_consistency
@@ -28,10 +29,10 @@ TECHNIQUES = {
 
 _DEFAULT_FIRST = {
     "math": "chain_of_thought",
-    "coding": "tool_augmented",
+    "coding": "chain_of_thought",
     "common_sense": "chain_of_thought",
-    "planning": "tree_of_thought",
-    "future_prediction": "self_refine",
+    "planning": "chain_of_thought",
+    "future_prediction": "chain_of_thought",
 }
 
 BUDGET_PER_QUESTION = 20
@@ -46,26 +47,35 @@ SAFETY_MARGIN = 1
 
 
 def _run_counted(fn, *args, **kwargs):
-    # Call a technique and return (answer, calls_used, full_result).
     res = fn(*args, **kwargs)
     return res.get("answer", ""), res.get("calls", 0), res
 
 
-_TOK = {"math": 256, "common_sense": 256, "coding": 1024, "future_prediction": 256, "planning": 512}
+_TOK = {"math": 1024, "common_sense": 512, "coding": 1024, "future_prediction": 512, "planning": 1024}
 
-# Domains whose prompts have rigid formatting (action lists, \boxed{...} templates,
-# multiple-choice letter grids, etc.). Paraphrasing them loses the format hints,
-# so we skip the prompt optimizer and pass the original prompt straight through.
-_SKIP_OPTIMIZER = {"planning", "future_prediction"}
+_SKIP_OPTIMIZER = {"planning", "future_prediction", "coding"}
+
+
+_CODE_FENCE = re.compile(r"```(?:python)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
+_ACTION_LINE = re.compile(r"^\s*\([a-zA-Z_][\w\-]*(?:\s+[\w\-]+)*\s*\)\s*$")
 
 
 def _postprocess_answer(domain: str, ans: str) -> str:
-    # Planning domain: when the model emits '[PLAN] ... [PLAN END]', return only
-    # the body of the (last) plan block. Falls back to the unchanged answer.
-    if domain == "planning" and ans:
+    if not ans:
+        return ans
+    if domain == "planning":
         m = re.search(r"\[PLAN\]\s*(.*?)\s*\[PLAN END\]", ans, re.DOTALL)
         if m and m.group(1).strip():
             return m.group(1).strip()
+        action_lines = [ln.strip() for ln in ans.splitlines() if _ACTION_LINE.match(ln)]
+        if action_lines:
+            return "\n".join(action_lines)
+        return ans
+    if domain == "coding":
+        m = _CODE_FENCE.search(ans)
+        if m and m.group(1).strip():
+            return m.group(1).rstrip()
+        return ans
     return ans
 
 
@@ -93,6 +103,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
             optimized,
             domain,
             max_tokens=_TOK.get(domain, 1024),
+            system=output_instructions(domain),
         )
         calls_used += c
         if verbose:
