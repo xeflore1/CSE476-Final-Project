@@ -13,7 +13,7 @@ def self_consistency(prompt: str,
                         "<DONE>"
                      ),
                      temperature: float = 0.5, # increase temp so that model explores different logical approaches
-                     max_tokens: int = 1024,
+                     max_tokens: int = 4000,
                      timeout: int = 120,
                      n_samples: int = 4,
                      **_ignored
