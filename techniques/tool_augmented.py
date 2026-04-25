@@ -42,6 +42,16 @@ def tool_augmented(prompt: str, domain: str = "common_sense", *, max_tokens: int
 
     # check if tool needed
     match = TOOL_PATTERN.search(text)
+    finish = re.search(r"Action:\s*Finish\[(.*?)\]", text, re.DOTALL)
+
+    if finish and not match:
+        return {
+            "ok": True,
+            "text": text,
+            "answer": finish.group(1).strip(),
+            "calls": 1,
+            "error": None
+        }
 
     if not match:
         # no tool needed
@@ -93,10 +103,14 @@ def tool_augmented(prompt: str, domain: str = "common_sense", *, max_tokens: int
         timeout=timeout
     )
 
+    final_text = final.get("text") or ""
+    final_finish = re.search(r"Action:\s*Finish\[(.*?)\]", final_text, re.DOTALL)
+    final_answer = final_finish.group(1).strip() if final_finish else final_text
+
     return {
         "ok": final["ok"],
-        "text": final.get("text"),
-        "answer": final.get("text"),
+        "text": final_text,
+        "answer": final_answer,
         "calls": 2,
         "error": final.get("error")
     }
