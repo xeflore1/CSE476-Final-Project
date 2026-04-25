@@ -40,9 +40,12 @@ def tool_augmented(prompt: str, domain: str = "common_sense", *, max_tokens: int
     text = response.get("text", "")
     print("Model output:", text)
 
-    # check if tool needed
-    match = TOOL_PATTERN.search(text)
-    finish = re.search(r"Action:\s*Finish\[(.*?)\]", text, re.DOTALL)
+    # strip fenced code blocks before tool-pattern matching so that
+    # example code inside ... doesn't trigger Calculator
+    text_no_code = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+     # check if tool needed
+    match = TOOL_PATTERN.search(text_no_code)
+    finish = re.search(r"Action:\s*Finish\[(.*?)\]", text_no_code, re.DOTALL)
 
     if finish and not match:
         return {
