@@ -16,7 +16,13 @@ def ask(prompt, system: str = "You are a helpful assistant ready to answer a que
             max_tokens=max_tokens,
             timeout=timeout,
         )
-        return {"ok": True, "text": response.get("text"), "answer": response.get("text"), "calls": response.get("calls", 0), "error": None}
+        return {
+            "ok": bool(response.get("ok")),
+            "text": response.get("text"),
+            "answer": response.get("text"),
+            "calls": response.get("calls", 0),
+            "error": response.get("error"),
+        }
     except Exception as e:
         return {"ok": False, "text": None, "answer": None, "calls": 0, "error": str(e)}
 
