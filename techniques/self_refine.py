@@ -32,7 +32,13 @@ def self_refine(prompt: str, domain: str = "", system: str = "You are a helpful 
             "feedback": feedback,
         })
         answer1 = answer2
+    text = (answer1 or {}).get("text") or ""
+    calls_total = sum(t.get("answer", {}).get("calls", 0) + t.get("feedback", {}).get("calls", 0) for t in transcript)
+    calls_total += (answer1 or {}).get("calls", 0)  # initial ask
     return {
-        "final_answer": answer1["text"],
-        "transcript": transcript,
+        "ok": bool((answer1 or {}).get("ok")),
+        "text": text,
+        "answer": extract_answer(text) or text.strip(),
+        "calls": calls_total,
+        "error": (answer1 or {}).get("error"),
     }
