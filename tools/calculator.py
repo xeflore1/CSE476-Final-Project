@@ -17,7 +17,7 @@ def _eval(node):
             return node.value
         raise ValueError("Only numeric values are allowed.")
 
-    elif isinstance(node, ast.Num):  # trouble shooting for older Python version
+    elif isinstance(node, ast.Num):
         return node.n
 
     elif isinstance(node, ast.BinOp):
