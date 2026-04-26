@@ -44,67 +44,57 @@ This file acts as the "main" file for our program. It inputs the questions from 
 ## Architecture of Repo
 
 Flow of Program:
-Input Question -> DC["Input"] -> Correct Domain
 
-Correct Domain -> agent_router.agent(domain) -> prompt_optimization
 
-prompt_optimized_call["question", domain] -> Reworded Prompt
 
-Reworded Prompt -> Primary Technique["question"] -> answer
+Input Question -> DC["Input"] -> Correct Domain  
+Correct Domain -> agent_router.agent(domain) -> prompt_optimization  
+prompt_optimized_call["question", domain] -> Reworded Prompt  
+Reworded Prompt -> Primary Technique["question"] -> answer  
 
-confidence_check("answer") -> If low:
-<pre>
-                                   ensemble_vote("question") OR self_refine(question) - depending on budget remaining
-</pre>
-```                                       
-                              If medium OR high:
-                                   submit answer and check for <= 5000 chars
-```
-If Tools Needed:
-```
-                  Primary Technique -> Uses /tools/calculator or tools/code_executor
-```
+confidence_check("answer") -> If low: ensemble_vote("question") OR self_refine(question) - depending on budget remaining  
+confidence_check("answer" -> If medium OR high: submit answer and check for <= 5000 answers  
+
+If Tools Needed: Primary Technique -> Uses /tools/calculator or tools/code_executor
+
+
 ## Primary Technique Mapping
-'math': 'chain_of_thought'
-
-'coding': 'tool_augmented'
-
-'common_sense': 'chain_of_thought'
-
-'planning': 'tree_of_thought'
-
-'future_prediction': 'self_refine'
+'math': 'chain_of_thought'  
+'coding': 'tool_augmented'  
+'common_sense': 'chain_of_thought'  
+'planning': 'tree_of_thought'  
+'future_prediction': 'self_refine'  
 
 ## File Structure:
-/techniques
-  chain_of_thought.py
-  self_consistency.py
-  tree_of_thought.py
-  self_refine.py
-  react_agent.py
-  tool_augmented.py
-  decomposition.py
-  ensemble_voting.py
-  prompt_optimization.py
-  llm_as_judge.py
-  output_instructions.py
-  utils.py
-/tools
-  \_\_init\_\_.py
-  calculator.py
-  code_executor.py
+/techniques  
+  chain_of_thought.py  
+  self_consistency.py  
+  tree_of_thought.py  
+  self_refine.py  
+  react_agent.py  
+  tool_augmented.py  
+  decomposition.py  
+  ensemble_voting.py  
+  prompt_optimization.py  
+  llm_as_judge.py  
+  output_instructions.py  
+  utils.py  
+/tools  
+  \_\_init\_\_.py  
+  calculator.py  
+  code_executor.py  
   
-.env
-.gitignore
-requirements.txt
-api_wrapper.py
-agent_router.py
-run_submission.py    - Run this for submission
-domain_classifier.py
+.env  
+.gitignore  
+requirements.txt  
+api_wrapper.py  
+agent_router.py  
+run_submission.py    - Run this for submission  
+domain_classifier.py  
 
-cse476_final_project_dev_data.json    - 1,000 labelled dev rows
-cse_476_final_project_test_data.json  - 6,208 unlabelled test rows
-cse_476_final_project_answers.json    - generated submission
+cse476_final_project_dev_data.json    - 1,000 labelled dev rows  
+cse_476_final_project_test_data.json  - 6,208 unlabelled test rows  
+cse_476_final_project_answers.json    - generated submission  
 
 
 ### Final File Format
