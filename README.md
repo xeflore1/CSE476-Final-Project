@@ -52,14 +52,14 @@ confidence_check("answer") -> If low:
 <pre>
                                    ensemble_vote("question") OR self_refine(question) - depending on budget remaining
 </pre>
-<pre>                                       
-                             If medium OR high:
+```                                       
+                              If medium OR high:
                                    submit answer and check for <= 5000 chars
-</pre>
+```
 If Tools Needed:
-<pre>
+```
                   Primary Technique -> Uses /tools/calculator or tools/code_executor
-</pre>
+```
 ## Primary Technique Mapping
 'math': 'chain_of_thought'
 'coding': 'tool_augmented'
