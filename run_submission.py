@@ -15,18 +15,43 @@ OUTPUT_FILE = _ROOT / "cse_476_final_project_answers.json"
 EXPECTED_COUNT = 6208
 
 
+def _load_existing_answers() -> list[dict]:
+    if not OUTPUT_FILE.exists():
+        return []
+    try:
+        with OUTPUT_FILE.open(encoding="utf-8") as fp:
+            data = json.load(fp)
+        if isinstance(data, list):
+            return data
+    except Exception:
+        pass
+    return []
+
+
+def _save_checkpoint(answers: list[dict]) -> None:
+    with OUTPUT_FILE.open("w", encoding="utf-8") as fp:
+        json.dump(answers, fp, indent=2)
+
+
 def generate_answers():
     with INPUT_FILE.open(encoding='utf-8') as fp:
         test_data = json.load(fp)
-    answers = []
+    answers = _load_existing_answers()
+    start_idx = len(answers)
+    if start_idx:
+        print(f"Resuming from checkpoint: {start_idx}/{len(test_data)}")
     start = time.time()
-    for i, row in enumerate(test_data):
+    for i in range(start_idx, len(test_data)):
+        row = test_data[i]
         q = row["input"]
         try:
             out = agent(q)
         except Exception as e:
             out = f"ERROR: {e}"
         answers.append({"input": q, "output": out if out is not None else ""})
+        # Save progress incrementally so work survives interruptions/crashes.
+        if (i + 1) % 10 == 0:
+            _save_checkpoint(answers)
         if (i + 1) % 100 == 0:
             dt = time.time() - start
             n = len(test_data)
@@ -34,6 +59,7 @@ def generate_answers():
                 f"  {i + 1}/{n} in {dt:.1f}s "
                 f"(~{dt / (i + 1):.2f}s/q, eta {dt / (i + 1) * (n - i - 1) / 60:.1f} min)"
             )
+    _save_checkpoint(answers)
     return answers
 
 
@@ -51,7 +77,7 @@ def validate_results(answers):
 
 
 def save_answers(answers):
-    with OUTPUT_FILE.open("w") as fp:
+    with OUTPUT_FILE.open("w", encoding="utf-8") as fp:
         json.dump(answers, fp, indent=2)
     print(f"Wrote {len(answers)} answers to {OUTPUT_FILE}")
 
