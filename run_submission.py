@@ -16,7 +16,7 @@ EXPECTED_COUNT = 6208
 
 
 def generate_answers():
-    with INPUT_FILE.open() as fp:
+    with INPUT_FILE.open(encoding='utf-8') as fp:
         test_data = json.load(fp)
     answers = []
     start = time.time()

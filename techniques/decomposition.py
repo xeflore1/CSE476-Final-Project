@@ -34,11 +34,12 @@ def decomposition(prompt: str,
     Calls an OpenAI-style /v1/chat/completions endpoint and returns:
     { 'ok': bool, 'text': str or None, 'raw': dict or None, 'status': int, 'error': str or None, 'headers': dict }
     """
+    
     print("Running with Decomposition Now")
     max_tokens = 2000
-    my_system = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem.\n You must answer in UTF-8.\n Each subproblem must be independent of each other (can be solved parallelly) and easy-to-merge with other solutions.\n The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]"
+    split_system = "You are a logical assistant. Your job is divide the problem into 3 smaller subproblems whose results can be combined into a solution for the original problem.\n You must answer in UTF-8.\n Each subproblem must be independent of each other (can be solved parallelly) and easy-to-merge with other solutions.\n The output format MUST be EXACTLY:\n [\"subproblem 1\", \"subproblem 2\", \"subproblem 3\"]"
     messages = [
-            {"role": "system", "content": my_system},
+            {"role": "system", "content": split_system},
             {"role": "user",   "content": prompt},
     ]
     first_response = call_model_chat_completions(messages=messages, temperature=temperature, frequency_penalty=0.0, max_tokens=max_tokens, timeout=timeout)
@@ -49,16 +50,18 @@ def decomposition(prompt: str,
     #return first_response
     try:
         subproblem_list = ast.literal_eval(first_response["text"])
+        if not isinstance(subproblem_list, list):
+            raise ValueError("Subproblems are not returned as a list")
     except Exception as e:
         print(f"Exception Received for Parsing First Response in Decomposition: {e}")
-        subproblem_list = first_response["text"].split(',')
-    new_system = "You are a logical assistant. Think step-by-step and answer the given question. You must answer in UTF-8. Output your answer concisely. Answer MUST be EXACTLY in the format \\boxed{answer}."
+        subproblem_list = first_response["text"].split('\n')[:3]
+    subq_system = "You are a logical assistant. Think step-by-step and answer the given question. You must answer in UTF-8. Output your answer concisely. Answer MUST be EXACTLY in the format \\boxed{answer}."
     max_tokens = 8000
     print("Original List of Subproblems:\n" + str(subproblem_list))
-    #subq_ans = {}
+    subq_ans = {}
     subproblem_response = ""
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as threads:
-        futures = {threads.submit(calling_api, subq, new_system, model, temperature, timeout, max_tokens): subq for subq in subproblem_list}
+        futures = {threads.submit(calling_api, subq, subq_system, model, temperature, timeout, max_tokens): subq for subq in subproblem_list}
         for i in concurrent.futures.as_completed(futures):
             subq = futures[i]
             try:
@@ -67,21 +70,22 @@ def decomposition(prompt: str,
                 print("Exception:", error)
                 
     print("Subproblem Response + Context after Completion:", subproblem_response)
-    new_system = "You have been provided with 3 subproblems, 3 sub-solutions to those subproblems, and the original problem. Your task is to output a combine solution using each sub-solution provided to you."
+    final_system = "You have been provided with 3 subproblems, 3 sub-solutions to those subproblems, and the original problem. Your task is to output a combine solution using each sub-solution provided to you."
     final_prompt = "Original Question: " + prompt + "\n\n" + "The following are 3 subproblems and the corresponding answers to each subproblem:\n" + subproblem_response + "\n\nCombine all of these sub-solutions into a final solution to the question\n" + "Your final answer MUST end with this exact format:\n" + "\\boxed{answer}\n" + "<DONE>"
     max_tokens = 8000
+    print("Final Prompt for Decomposition:", final_prompt)
     messages = [
-            {"role": "system", "content": new_system},
+            {"role": "system", "content": final_system},
             {"role": "user",   "content": final_prompt},
     ]
     last_response = call_model_chat_completions(messages=messages, temperature=temperature, frequency_penalty=0.0, max_tokens=max_tokens, timeout=timeout)
     return {
-        "ok": True,
-        "text": last_response['text'][:30],
+        "ok": bool(last_response.get('ok')),
+        "text": last_response['text'],
         #"answer": "",
         "answer": extract_answer(last_response['text']),
         "calls": 5,
-        "error": None
+        "error": last_response.get("error")
     }
 
     

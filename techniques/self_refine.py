@@ -1,48 +1,44 @@
 from api_wrapper import call_model_chat_completions, MODEL
 from utils import extract_answer
 
-def self_refine(prompt, system: str ="You are a helpful assistant ready to answer a question.", model: str = MODEL, temperature: float = 0.0, timeout: int = 60) -> dict:
-    """
-    Basic ask function | UPDATED TO USE API WRAPPER
-    """
-    try:
-        resp = call_model_chat_completions(
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": prompt},
-            ],
-            model=model,
-            temperature=temperature,
-            max_tokens=2048,
-            timeout=timeout,
-        )
-        if resp.get("ok"):
-            print("200 returned")
-            return {
-                "ok": True,
-                "text": resp.get("text"),
-                "raw": resp.get("raw"),
-                "status": resp.get("status"),
-                "error": None,
-                "headers": resp.get("headers", {}),
-                "calls": resp.get("calls", 0),
-            }
-        else:
-            print("200 is NOT returned")
-            return {
-                "ok": False,
-                "text": None,
-                "raw": None,
-                "status": resp.get("status", -1),
-                "error": str(resp.get("error")),
-                "headers": resp.get("headers", {}),
-                "calls": resp.get("calls", 0),
-            }
-    except Exception as e:
-        return {"ok": False, "text": None, "raw": None, "status": -1, "error": str(e), "headers": {}, "calls": 0}
-    
-def self_refinement(prompt: str) -> dict:
-    answer1 = self_refine(prompt)
-    feedback1 = self_refine("Give your critique of this answer:\n\n" + (answer1["text"] or ""))
-    answer2 = self_refine("using this critique, give a better answer to the original question:\n\n" + feedback1["text"] or "")
-    return {"answer1": answer1, "feedback1": feedback1, "answer2": answer2}
+def self_refine(prompt: str, domain: str = "", system: str = "You are a helpful assistant ready to answer a question.", model: str = MODEL, temperature: float = 0.0,
+                 timeout: int = 60, max_iterations: int = 1, max_tokens: int = 2048, **_ignored) -> dict:
+    transcript = []
+    def ask(user_prompt: str):
+        try:
+            response = call_model_chat_completions(
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                timeout=timeout,
+                model=model,
+            )
+            return {"ok": True, "text": response.get("text"), "answer": response.get("text"), "calls": response.get("calls", 0), "error": None}
+        except Exception as e:
+            return {"ok": False, "text": None, "answer": None, "calls": 0, "error": str(e)}
+        
+    prompt1 = prompt
+    answer1 = ask(prompt1)
+    for i in range(max_iterations):
+        feedback = ask(f"Critique this answer:\n\n{answer1['text'] or ''}")
+        prompt1 = f"{prompt}\n\nPrevious answer:\n{answer1['text'] or ''}\n\nFeedback:\n{feedback['text'] or ''}\n\nPlease provide an improved answer."
+        answer2 = ask(prompt1)
+        transcript.append({
+            "iteration": i + 1,
+            "answer": answer2,
+            "feedback": feedback,
+        })
+        answer1 = answer2
+    text = (answer1 or {}).get("text") or ""
+    calls_total = sum(t.get("answer", {}).get("calls", 0) + t.get("feedback", {}).get("calls", 0) for t in transcript)
+    calls_total += (answer1 or {}).get("calls", 0)  # initial ask
+    return {
+        "ok": bool((answer1 or {}).get("ok")),
+        "text": text,
+        "answer": extract_answer(text) or text.strip(),
+        "calls": calls_total,
+        "error": (answer1 or {}).get("error"),
+    }

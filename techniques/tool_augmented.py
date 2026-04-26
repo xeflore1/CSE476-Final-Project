@@ -40,8 +40,21 @@ def tool_augmented(prompt: str, domain: str = "common_sense", *, max_tokens: int
     text = response.get("text", "")
     print("Model output:", text)
 
-    # check if tool needed
-    match = TOOL_PATTERN.search(text)
+    # strip fenced code blocks before tool-pattern matching so that
+    # example code inside ... doesn't trigger Calculator
+    text_no_code = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+     # check if tool needed
+    match = TOOL_PATTERN.search(text_no_code)
+    finish = re.search(r"Action:\s*Finish\[(.*?)\]", text_no_code, re.DOTALL)
+
+    if finish and not match:
+        return {
+            "ok": True,
+            "text": text,
+            "answer": finish.group(1).strip(),
+            "calls": 1,
+            "error": None
+        }
 
     if not match:
         # no tool needed
@@ -93,10 +106,14 @@ def tool_augmented(prompt: str, domain: str = "common_sense", *, max_tokens: int
         timeout=timeout
     )
 
+    final_text = final.get("text") or ""
+    final_finish = re.search(r"Action:\s*Finish\[(.*?)\]", final_text, re.DOTALL)
+    final_answer = final_finish.group(1).strip() if final_finish else final_text
+
     return {
         "ok": final["ok"],
-        "text": final.get("text"),
-        "answer": final.get("text"),
+        "text": final_text,
+        "answer": final_answer,
         "calls": 2,
         "error": final.get("error")
     }
