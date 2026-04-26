@@ -39,7 +39,7 @@ This file acts as the "main" file for our program. It inputs the questions from 
 ## Architecture of Repo
 
 Flow of Program:
-Input Question -> DC["Input"] -> Correct Domain
+Input Question -> DC["Input"] -> Correct Domain____
 Correct Domain -> agent_router.agent(domain) -> prompt_optimization
 prompt_optimized_call["question", domain] -> Reworded Prompt
 Reworded Prompt -> Primary Technique["question"] -> answer
