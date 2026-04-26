@@ -107,7 +107,7 @@ The answers.json should look something like this:
 { "input": "Question", "output": "<answer string under 5000 chars>" }
 ]
 ```
-### Important Note: answers.json file is updated every 10 inputs
+### Important Note: answers.json file is updated every 10 questions
 
 ## Important Considerations for Project
 
