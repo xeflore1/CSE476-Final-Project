@@ -1,6 +1,7 @@
 # CSE476-Final-Project
 
 This repository contains our implementation of an agent that uses 10 prompting techniques (split evenly amongst 5 members) to solve problems from math, coding, future prediction, common sense, and planning
+
 Prompting Techniques: Chain of Thought, Self-Consistency, Self-Refine, Tree of Thought, ReACT, Tool-Augmented Reasoning, LLM as Judge, Prompt Optimization, Decomposition, Ensemble Voting
 
 #### Requirements
@@ -101,15 +102,11 @@ cse_476_final_project_answers.json    - generated submission
 
 The answers.json should look something like this:
 
+```json
 [
-  {
-    "output": "ans1"
-  },
-
-  {
-    "output": "ans2"
-  }
+{ "output": "<answer string under 5000 chars>" }
 ]
+```
 
 ## Important Considerations for Project
 
