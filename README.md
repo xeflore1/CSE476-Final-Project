@@ -34,6 +34,10 @@ All commands assume you are inside `CSE476-Final-Project/` with the venv active.
 ```bash
 python3 run_submission.py
 ```
+## Single Question Test
+```bash
+python3 agent_router.py "What is 2 + 2?"
+```
 
 This file acts as the "main" file for our program. It inputs the questions from the cse_476_final_project_test_data.json, runs agent_router on all of our techniques, and outputs the final answer out to an cse_476_final_project_answers.json file
 
@@ -62,9 +66,13 @@ If Tools Needed:
 ```
 ## Primary Technique Mapping
 'math': 'chain_of_thought'
+
 'coding': 'tool_augmented'
+
 'common_sense': 'chain_of_thought'
+
 'planning': 'tree_of_thought'
+
 'future_prediction': 'self_refine'
 
 ## File Structure:
