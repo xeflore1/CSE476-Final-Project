@@ -104,7 +104,7 @@ The answers.json should look something like this:
 
 ```json
 [
-{ "output": "<answer string under 5000 chars>" }
+{ "input": "Question", "output": "<answer string under 5000 chars>" }
 ]
 ```
 
