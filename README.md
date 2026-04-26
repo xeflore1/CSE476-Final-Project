@@ -49,14 +49,17 @@ prompt_optimized_call["question", domain] -> Reworded Prompt
 Reworded Prompt -> Primary Technique["question"] -> answer
 
 confidence_check("answer") -> If low:
-
-'                                       ensemble_vote("question") OR self_refine(question) - depending on budget remaining`
-                                       
-`                             If medium OR high:`
-                                       submit answer and check for <= 5000 chars
+<pre>
+                                   ensemble_vote("question") OR self_refine(question) - depending on budget remaining
+</pre>
+<pre>                                       
+                             If medium OR high:
+                                   submit answer and check for <= 5000 chars
+</pre>
 If Tools Needed:
+<pre>
                   Primary Technique -> Uses /tools/calculator or tools/code_executor
-
+</pre>
 ## Primary Technique Mapping
 'math': 'chain_of_thought'
 'coding': 'tool_augmented'
