@@ -26,6 +26,7 @@ API_BASE=https://openai.rc.asu.edu/v1
 MODEL_NAME=qwen3-30b-a3b-instruct-2507
 EOF
 ```
+
 All commands assume you are inside `CSE476-Final-Project/` with the venv active.
 
 ## Full submission run (6,208 questions)
@@ -39,13 +40,19 @@ This file acts as the "main" file for our program. It inputs the questions from 
 ## Architecture of Repo
 
 Flow of Program:
-Input Question -> DC["Input"] -> Correct Domain____
+Input Question -> DC["Input"] -> Correct Domain
+
 Correct Domain -> agent_router.agent(domain) -> prompt_optimization
+
 prompt_optimized_call["question", domain] -> Reworded Prompt
+
 Reworded Prompt -> Primary Technique["question"] -> answer
+
 confidence_check("answer") -> If low:
-                                       ensemble_vote("question") OR self_refine(question) - depending on budget remaining
-                              If medium OR high:
+
+'                                       ensemble_vote("question") OR self_refine(question) - depending on budget remaining`
+                                       
+`                             If medium OR high:`
                                        submit answer and check for <= 5000 chars
 If Tools Needed:
                   Primary Technique -> Uses /tools/calculator or tools/code_executor
