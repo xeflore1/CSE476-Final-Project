@@ -68,22 +68,22 @@ If Tools Needed: Primary Technique -> Uses /tools/calculator or tools/code_execu
 
 ## File Structure:
 /techniques  
-  chain_of_thought.py  
-  self_consistency.py  
-  tree_of_thought.py  
-  self_refine.py  
-  react_agent.py  
-  tool_augmented.py  
-  decomposition.py  
-  ensemble_voting.py  
-  prompt_optimization.py  
-  llm_as_judge.py  
-  output_instructions.py  
-  utils.py  
+&nbsp;&nbdp;chain_of_thought.py  
+&nbsp;&nbdp;self_consistency.py  
+&nbsp;&nbdp;tree_of_thought.py  
+&nbsp;&nbdp;self_refine.py  
+&nbsp;&nbdp;react_agent.py  
+&nbsp;&nbdp;tool_augmented.py  
+&nbsp;&nbdp;decomposition.py  
+&nbsp;&nbdp;ensemble_voting.py  
+&nbsp;&nbdp;prompt_optimization.py  
+&nbsp;&nbdp;llm_as_judge.py  
+&nbsp;&nbdp;output_instructions.py  
+&nbsp;&nbdp;utils.py  
 /tools  
-  \_\_init\_\_.py  
-  calculator.py  
-  code_executor.py  
+&nbsp;&nbdp;\_\_init\_\_.py  
+&nbsp;&nbdp;calculator.py  
+&nbsp;&nbdp;code_executor.py  
   
 .env  
 .gitignore  
