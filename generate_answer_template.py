@@ -7,6 +7,7 @@ before submitting so the ``output`` fields contain your real predictions.
 Reads the input questions from cse_476_final_project_test_data.json and writes
 an answers JSON file where each entry contains a string under the "output" key.
 """
+
 from __future__ import annotations
 
 import json, re
@@ -14,15 +15,22 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 from utils import extract_answer
-from technique.chain_of_thought import chain_of_thought
-from technique.self_consistency import self_consistency
+import json
+from pathlib import Path
+from typing import Any, Dict, List
+from utils import extract_answer
+from techniques.chain_of_thought import chain_of_thought
+from techniques.self_consistency import self_consistency
 
 # Load .env
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
+from agent_router import agent
 
-INPUT_PATH = Path(__file__).parent / "personal_inputs.json"
+INPUT_PATH = Path(__file__).parent / "cse_476_final_project_test_data.json"
 OUTPUT_PATH = Path(__file__).parent / "cse_476_final_project_answers.json"
+EXPECTED_COUNT = 6208
+MAX_OUTPUT_CHARS = 5000
     
 def load_questions(path: Path) -> List[Dict[str, Any]]:
     with path.open("r") as fp:
@@ -35,29 +43,42 @@ def load_questions(path: Path) -> List[Dict[str, Any]]:
 def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     answers = []
     print("about to loop through questions and build answers")
-    for idx, question in enumerate(questions, start=1):
+    for idx, q in enumerate(questions, start=1):
         # Example: assume you have an agent loop that produces an answer string.
         # real_answer = agent_loop(question["input"])
         # answers.append({"output": real_answer})
 
         # call chain of thought
-        print(f"***** idx: {idx}, question: {question['input']} *****\n")
-        result = chain_of_thought(question["input"])
-        print("OK:", result["ok"], "HTTP:", result["status"])
-        print("MODEL SAYS:", (result["text"] or "").strip())
-        modelAnswer = extract_answer(result["text"])
-        print(modelAnswer)
-        answers.append({"output": modelAnswer or ""})
+        # print(f"***** idx: {idx}, question: {question['input']} *****\n")
+        # result = chain_of_thought(question["input"])
+        # print("OK:", result["ok"], "HTTP:", result["status"])
+        # print("MODEL SAYS:", (result["text"] or "").strip())
+        # modelAnswer = extract_answer(result["text"])
+        # print(modelAnswer)
+        # answers.append({"output": modelAnswer or ""})
 
         # call self-consistency
-        # print(f"***** idx: {idx}, question: {question['input']} *****\n")
-        # result = self_consistency(question["input"])
-        # print(f"***** result: {result} *****\n")
-        # # print("OK:", result["ok"], "HTTP:", result["status"])
-        # # print("MODEL SAYS:", (result["text"] or "").strip())
-        # answers.append({"output": result})
+    #    print(f"***** idx: {idx}, question: {question['input']} *****\n")
+    #    result = final_project.self_consistency(question["input"])
+    #    print(f"***** result: {result} *****\n")
+        # print("OK:", result["ok"], "HTTP:", result["status"])
+        # print("MODEL SAYS:", (result["text"] or "").strip())
+    #    answers.append({"output": result})
 
+        # calling Tool Augmented reasoning for now
+        try:
+            out = agent(q["input"])
+        except Exception as e:
+            out = f"ERROR: {e}"
+        if not isinstance(out, str):
+            out = str(out) if out is not None else ""
+        if len(out) >= MAX_OUTPUT_CHARS:
+            out = out[:MAX_OUTPUT_CHARS - 1]
+        answers.append({"output": out})
+        if idx % 50 == 0:
+            print(f"  processed {idx}/{len(questions)}")
     return answers
+
 
 
 def validate_results(

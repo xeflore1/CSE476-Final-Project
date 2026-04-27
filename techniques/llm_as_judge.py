@@ -1,37 +1,36 @@
 from __future__ import annotations
-
 import re
-import requests
-
-import finalProject as final_project
+from api_wrapper import call_model_chat_completions, MODEL
 
 JUDGE_MAX_TOKENS = 32
 
-# Helper function to call the LLM endpoint with the given system, user, model, and temperature.
-def _chat(system: str, user: str, model: str, temperature: float) -> dict:
-    url = f"{final_project.API_BASE}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {final_project.API_KEY}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": model,
-        "messages": [
+_CONFIDENCE_SYS = (
+    "Rate confidence in the answer. Reply with high, medium, or low. "
+    "Or a single digit 1-5 (5 = most confident)."
+)
+
+
+def _chat(system, user, model, temperature):
+    # payload = {
+    #     "model": model,
+    #     "messages": [
+    #         {"role": "system", "content": system},
+    #         {"role": "user", "content": user},
+    #     ],
+    #     "temperature": temperature,
+    #     "max_tokens": JUDGE_MAX_TOKENS,
+    # }
+    messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
-        ],
-        "temperature": temperature,
-        "max_tokens": JUDGE_MAX_TOKENS,
-    }
+    ]
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=120)
-        if resp.status_code != 200:
+        res = call_model_chat_completions(messages=messages, temperature=temperature, max_tokens=JUDGE_MAX_TOKENS, timeout=120)
+        if not res["ok"]:
             return {"ok": False, "text": None}
-        data = resp.json()
-        text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-        return {"ok": True, "text": text}
-    except requests.RequestException:
-        return {"ok": False, "text": None}
+        return {"ok": True, "text": res["text"]}
+    except Exception as e:
+        return {"ok": False, "text": None, "error": str(e)}
 
 # Helper function to parse the boolean response from the LLM.
 def _parse_bool(text: str | None, prediction, expected) -> bool:
@@ -59,13 +58,6 @@ def _parse_choice(text: str | None, n: int) -> int:
         if 1 <= v <= n:
             return v
     return 1
-
-# Helper function to parse the confidence response from the LLM.
-def _parse_confidence(text: str | None) -> int:
-    if not text:
-        return 5
-    m = re.search(r"\b(10|[1-9])\b", text.strip())
-    return int(m.group(1)) if m else 5
 
 # Binary Judge is a function that judges if the prediction is correct or not. It returns True if the prediction is correct and False otherwise.
 def binary_judge(question, prediction, expected, model, temperature=0.0) -> bool:
@@ -95,12 +87,24 @@ def comparative_judge(question, candidates, model, temperature=0.0) -> int:
     r = _chat(system, user, model, temperature)
     return _parse_choice(r.get("text"), n)
 
-# Confidence Check is a function that checks the confidence of the answer. It returns the confidence score.
-def confidence_check(question, answer, model, temperature=0.0) -> int:
-    system = (
-        "Rate your confidence in this answer from 1 (very unsure) to 10 (certain). "
-        "Reply with just the number."
+def confidence_check(question, answer, *, model=MODEL, temperature=0.0) -> dict:
+    res = call_model_chat_completions(
+        messages=[
+            {"role": "system", "content": _CONFIDENCE_SYS},
+            {"role": "user", "content": f"Q: {question}\nA: {answer}"},
+        ],
+        model=model, temperature=temperature, max_tokens=8, timeout=120,
     )
-    user = f"Question: {question}\nAnswer: {answer}\nConfidence (1-10):"
-    r = _chat(system, user, model, temperature)
-    return _parse_confidence(r.get("text"))
+    text = (res.get("text") or "").strip().lower()
+    if "high" in text or text.startswith(("4", "5")):
+        level = "high"
+    elif "low" in text or text.startswith(("1",)):
+        level = "low"
+    else:
+        level = "medium"
+    return {
+        "ok": res.get("ok", False),
+        "level": level,
+        "calls": res.get("calls", 0),
+        "error": res.get("error"),
+    }
