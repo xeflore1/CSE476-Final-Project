@@ -51,7 +51,7 @@ Flow of Program:
 Input Question -> DC["Input"] -> Correct Domain  
 Correct Domain -> agent_router.agent(domain) -> prompt_optimization  
 prompt_optimized_call["question", domain] -> Reworded Prompt  
-Reworded Prompt -> Primary Technique["question"] -> answer  
+Reworded Prompt -> Primary Technique["Reworded Prompt"] -> answer  
 
 confidence_check("answer") -> If low: ensemble_vote("question") OR self_refine(question) - depending on budget remaining  
 confidence_check("answer" -> If medium OR high: submit answer and check for <= 5000 answers  
