@@ -55,6 +55,9 @@ _TOK = {"math": 1024, "common_sense": 512, "coding": 1024, "future_prediction": 
 
 _SKIP_OPTIMIZER = {"planning", "future_prediction", "coding"}
 
+LONG_PROMPT_CHARS = 6000
+VERY_LONG_PROMPT_CHARS = 16000
+
 
 _CODE_FENCE = re.compile(r"```(?:python)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
 _ACTION_LINE = re.compile(r"^\s*\([a-zA-Z_][\w\-]*(?:\s+[\w\-]+)*\s*\)\s*$")
@@ -79,12 +82,64 @@ def _postprocess_answer(domain: str, ans: str) -> str:
     return ans
 
 
+def _resolve_max_tokens(domain: str, prompt: str) -> int:
+    base = _TOK.get(domain, 1024)
+    if len(prompt) >= VERY_LONG_PROMPT_CHARS:
+        return min(base, 384)
+    if len(prompt) >= LONG_PROMPT_CHARS:
+        return min(base, 512)
+    return base
+
+
+def _rescue_answer(prompt: str, domain: str, calls_used: int, verbose: bool):
+    #Try simpler / cleaner techniques when the primary returned nothing. Returns (answer, additional_calls_used).
+    extra_calls = 0
+
+    if calls_used + 1 <= BUDGET_PER_QUESTION:
+        try:
+            r1 = chain_of_thought(
+                prompt,
+                domain,
+                max_tokens=_resolve_max_tokens(domain, prompt),
+                system=output_instructions(domain),
+                temperature=0.0,
+            )
+            extra_calls += r1.get("calls", 0)
+            ans1 = r1.get("answer") or ""
+            if verbose:
+                print(f"[router] rescue#1 cot_clean calls={r1.get('calls', 0)} ok={r1.get('ok')} len={len(ans1)}")
+            if ans1.strip():
+                return ans1, extra_calls
+        except Exception as e:
+            if verbose:
+                print(f"[router] rescue#1 exception: {e}")
+
+    if calls_used + extra_calls + 2 <= BUDGET_PER_QUESTION:
+        try:
+            r2 = self_refine(prompt, domain, max_iterations=1, max_tokens=_resolve_max_tokens(domain, prompt))
+            extra_calls += r2.get("calls", 0)
+            ans2 = r2.get("answer") or ""
+            if verbose:
+                print(f"[router] rescue#2 self_refine calls={r2.get('calls', 0)} ok={r2.get('ok')} len={len(ans2)}")
+            if ans2.strip():
+                return ans2, extra_calls
+        except Exception as e:
+            if verbose:
+                print(f"[router] rescue#2 exception: {e}")
+
+    return "", extra_calls
+
+
 def agent(prompt: str, *, verbose: bool = False) -> str:
     try:
         calls_used = 0
         domain = classify_domain(prompt)
-        if domain in _SKIP_OPTIMIZER:
+        is_long = len(prompt) >= LONG_PROMPT_CHARS
+        skip_optimizer = (domain in _SKIP_OPTIMIZER) or is_long
+        if skip_optimizer:
             optimized = prompt
+            if verbose and is_long:
+                print(f"[router] long prompt ({len(prompt)} chars) -> skip optimizer")
         else:
             opt = prompt_optimized_call(
                 prompt,
@@ -98,17 +153,25 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
             optimized = opt.get("optimized") or prompt
         primary_name = _DEFAULT_FIRST.get(domain, "chain_of_thought")
         primary_fn = TECHNIQUES[primary_name]
+        primary_max_tokens = _resolve_max_tokens(domain, optimized)
         ans, c, _ = _run_counted(
             primary_fn,
             optimized,
             domain,
-            max_tokens=_TOK.get(domain, 1024),
+            max_tokens=primary_max_tokens,
             system=output_instructions(domain),
         )
         calls_used += c
         if verbose:
-            print(f"[router] domain={domain} primary={primary_name} calls_so_far={calls_used}")
-        if calls_used < BUDGET_PER_QUESTION - 3 and ans:
+            print(f"[router] domain={domain} primary={primary_name} calls_so_far={calls_used} ans_len={len(ans or '')}")
+
+        if not (ans or "").strip():
+            rescue_ans, rescue_calls = _rescue_answer(prompt, domain, calls_used, verbose)
+            calls_used += rescue_calls
+            if rescue_ans:
+                ans = rescue_ans
+
+        if calls_used < BUDGET_PER_QUESTION - 3 and (ans or "").strip():
             confidence = confidence_check(prompt, ans)
             calls_used += confidence.get("calls", 0)
             if confidence.get("level") == "low":
@@ -120,7 +183,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
                         domain,
                         techniques_dict=TECHNIQUES,
                         budget=remaining - SAFETY_MARGIN,
-                        max_tokens=_TOK.get(domain, 1024),
+                        max_tokens=primary_max_tokens,
                         timeout=180,
                     )
                     calls_used += ens.get("calls", 0)
@@ -132,7 +195,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
                         domain,
                         techniques_dict=TECHNIQUES,
                         budget=remaining - SAFETY_MARGIN,
-                        max_tokens=_TOK.get(domain, 1024),
+                        max_tokens=primary_max_tokens,
                         timeout=180,
                     )
                     calls_used += ens.get("calls", 0)
@@ -144,7 +207,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
                     if sr.get("ok") and sr.get("answer"):
                         ans = sr["answer"]
         if verbose:
-            print(f"[router] final_calls={calls_used}")
+            print(f"[router] final_calls={calls_used} final_len={len(ans or '')}")
         if ans is None:
             ans = ""
         ans = _postprocess_answer(domain, ans)
