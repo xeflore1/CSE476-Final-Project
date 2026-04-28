@@ -44,6 +44,7 @@ def generate_answers():
     for i in range(start_idx, len(test_data)):
         row = test_data[i]
         q = row["input"]
+        print(f"\n{'='*60}\n[Q {i+1}/{len(test_data)}] domain=pending  len={len(q)}\n{'='*60}")
         try:
             out = agent(q)
         except Exception as e:

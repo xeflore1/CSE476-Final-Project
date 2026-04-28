@@ -97,6 +97,7 @@ def _rescue_answer(prompt: str, domain: str, calls_used: int, verbose: bool):
 
     if calls_used + 1 <= BUDGET_PER_QUESTION:
         try:
+            print(f"[TECHNIQUE] rescue: chain_of_thought (clean)  domain={domain}")
             r1 = chain_of_thought(
                 prompt,
                 domain,
@@ -116,6 +117,7 @@ def _rescue_answer(prompt: str, domain: str, calls_used: int, verbose: bool):
 
     if calls_used + extra_calls + 2 <= BUDGET_PER_QUESTION:
         try:
+            print(f"[TECHNIQUE] rescue: self_refine  domain={domain}")
             r2 = self_refine(prompt, domain, max_iterations=1, max_tokens=_resolve_max_tokens(domain, prompt))
             extra_calls += r2.get("calls", 0)
             ans2 = r2.get("answer") or ""
@@ -141,6 +143,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
             if verbose and is_long:
                 print(f"[router] long prompt ({len(prompt)} chars) -> skip optimizer")
         else:
+            print(f"[TECHNIQUE] prompt_optimization  domain={domain}")
             opt = prompt_optimized_call(
                 prompt,
                 domain,
@@ -154,6 +157,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
         primary_name = _DEFAULT_FIRST.get(domain, "chain_of_thought")
         primary_fn = TECHNIQUES[primary_name]
         primary_max_tokens = _resolve_max_tokens(domain, optimized)
+        print(f"[TECHNIQUE] {primary_name}  domain={domain}")
         ans, c, _ = _run_counted(
             primary_fn,
             optimized,
@@ -172,12 +176,14 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
                 ans = rescue_ans
 
         if calls_used < BUDGET_PER_QUESTION - 3 and (ans or "").strip():
+            print(f"[TECHNIQUE] llm_as_judge (confidence_check)  domain={domain}")
             confidence = confidence_check(prompt, ans)
             calls_used += confidence.get("calls", 0)
             if confidence.get("level") == "low":
                 remaining = BUDGET_PER_QUESTION - calls_used
                 need = ENSEMBLE_COST.get(domain, 8) + SAFETY_MARGIN
                 if remaining >= need:
+                    print(f"[TECHNIQUE] ensemble_voting  domain={domain} budget={remaining - SAFETY_MARGIN}")
                     ens = ensemble_vote(
                         optimized,
                         domain,
@@ -190,6 +196,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
                     if ens.get("ok") and ens.get("answer"):
                         ans = ens["answer"]
                 elif remaining >= 4:
+                    print(f"[TECHNIQUE] ensemble_voting  domain={domain} budget={remaining - SAFETY_MARGIN}")
                     ens = ensemble_vote(
                         optimized,
                         domain,
@@ -202,6 +209,7 @@ def agent(prompt: str, *, verbose: bool = False) -> str:
                     if ens.get("ok") and ens.get("answer"):
                         ans = ens["answer"]
                 elif remaining >= 3:
+                    print(f"[TECHNIQUE] self_refine  domain={domain} remaining={remaining}")
                     sr = self_refine(optimized, domain, max_iterations=1)
                     calls_used += sr.get("calls", 0)
                     if sr.get("ok") and sr.get("answer"):
