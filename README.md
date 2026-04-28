@@ -69,11 +69,11 @@ If Tools Needed: Primary Technique -> Uses /tools/calculator or tools/code_execu
 
 
 # Primary Technique Mapping AFTER Ensemble
-'math': \['decomposition', 'tool_augmented'\]
-'common_sense': \['self_refine', 'self_consistency'\]
-'coding': \['react', 'self_refine'\]
-'future_prediction': \['self_consistency', 'self_consistency'\]
-'planning': \['decomposition', 'tree_of_thought'\]
+'math': \['decomposition', 'tool_augmented'\]  
+'common_sense': \['self_refine', 'self_consistency'\]  
+'coding': \['react', 'self_refine'\]  
+'future_prediction': \['self_consistency', 'self_consistency'\]  
+'planning': \['decomposition', 'tree_of_thought'\]  
 
 Notes:
 - These are the per-domain ensemble mappings used by ensemble_voting when confidence is low and budget permits.
