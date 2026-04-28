@@ -1,5 +1,7 @@
 # CSE476-Final-Project
 
+Names: Abdul Mosawer Asefi, Saikrishna Vinapamula, Gabriel Garcia, Kareem Muakkit, Xavier Flores
+
 This repository contains our implementation of an agent that uses 10 prompting techniques (split evenly amongst 5 members) to solve problems from math, coding, future prediction, common sense, and planning
 
 Prompting Techniques: Chain of Thought, Self-Consistency, Self-Refine, Tree of Thought, ReACT, Tool-Augmented Reasoning, LLM as Judge, Prompt Optimization, Decomposition, Ensemble Voting
@@ -136,7 +138,7 @@ During the solving of each problem, useful information is printed in the termina
 
 ```
 ==============
-\[Q i/6208\] domain=pending len=size_of_question
+[Q i/6208] domain=pending len=size_of_question
 ==============
 [TECHNIQUE] technique_name domain=domain_of_question
 ...
