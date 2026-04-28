@@ -51,7 +51,7 @@ def _run_counted(fn, *args, **kwargs):
     return res.get("answer", ""), res.get("calls", 0), res
 
 
-_TOK = {"math": 4096, "common_sense": 2048, "coding": 2048, "future_prediction": 2048, "planning": 2048}
+_TOK = {"math": 8192, "common_sense": 8192, "coding": 8192, "future_prediction": 8192, "planning": 8192}
 
 _SKIP_OPTIMIZER = {"planning", "future_prediction", "coding"}
 
