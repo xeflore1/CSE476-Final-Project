@@ -37,7 +37,7 @@ python3 run_submission.py
 python3 agent_router.py "What is 2 + 2?"
 ```
 
-This file acts as the "main" file for our program. It inputs the questions from the cse_476_final_project_test_data.json, runs agent_router on all of our techniques, and outputs the final answer out to an cse_476_final_project_answers.json file
+This file acts as the "main" file for our program. It inputs the questions from the cse_476_final_project_test_data.json, runs agent_router.agent() for each question, and writes the final answer out to 'cse_476_final_project_answers.json'
 
 ## Architecture of Repo
 
@@ -45,26 +45,40 @@ Flow of Program:
 
 
 
-Input Question -> DC["Input"] -> Correct Domain  
-Correct Domain -> agent_router.agent(domain) -> prompt_optimization  
-prompt_optimized_call["question", domain] -> Reworded Prompt  
-Reworded Prompt -> Primary Technique["Reworded Prompt"] -> answer  
+Input Question -> domain_classifier.classify_domain("Input") -> Correct Domain  
+Correct Domain -> agent_router.agent(prompt)  
 
-confidence_check("answer") -> If low: ensemble_vote("question") OR self_refine(question) - depending on budget remaining  
-confidence_check("answer" -> If medium OR high: submit answer and check for <= 5000 answers  
+'agent_router' runs prompt optimization ONLY WHEN prompt is not very long such as for (planning, future prediction, etc.)
+prompt_optimized_call["question", domain] -> Optimized_or_Original Prompt  
+
+Optimized_or_Original -> Primary Technique[default="Chain_of_Thought"] -> answer  
+
+If primary answer is empty -> rescue_path(Retry with Chain_of_thought, THEN 'self_refine' if budget allows)  
+If answer is non-empty and budget allows -> llm_as_judge.confidence_check  
+
+confidence_check("answer") -> If low: ensemble_vote("question"); IF NOT:  self_refine(question) - depending on budget remaining  
+confidence_check("answer") -> If medium OR high: submit answer and check for <= 5000 answers  
 
 If Tools Needed: Primary Technique -> Uses /tools/calculator or tools/code_executor
 
-## IMPORTANT: Chain of Thought is the Second Default Method for All Domains Due to its Effectiveness. That is why you might see it more frequently than other techniques.
+
+
+## IMPORTANT: Chain of Thought is The Default Method for All Domains Due to its Effectiveness. That is why you might see it more frequently than other techniques.
+
 ## However, Other Techniques will still be Run Throughout the Submission
 
 
-# Primary Technique Mapping
-'math': 'chain_of_thought'  
-'coding': 'tool_augmented'  
-'common_sense': 'chain_of_thought'  
-'planning': 'tree_of_thought'  
-'future_prediction': 'self_refine'  
+# Primary Technique Mapping AFTER Ensemble
+'math': \['decomposition', 'tool_augmented'\]
+'common_sense': \['self_refine', 'self_consistency'\]
+'coding': \['react', 'self_refine'\]
+'future_prediction': \['self_consistency', 'self_consistency'\]
+'planning': \['decomposition', 'tree_of_thought'\]
+
+Notes:
+- These are the per-domain ensemble mappings used by ensemble_voting when confidence is low and budget permits.
+
+
 
 # File Structure:
 /techniques  
@@ -101,6 +115,7 @@ cse_476_final_project_answers.json    - generated submission
 # Final Output Submission
 
 ## IMPORTANT: The File that will contain the Output will be called: "cse_476_final_answers.json". The File with the Suffix will contain the Answers when you run the Submission.
+
 ## The File that Contains the Answers that we Pre-Generated before Submission are in: "cse_476_final_answers_generic.json"
 
 
@@ -116,6 +131,7 @@ The answers.json should look something like this:
 ## Important Note: answers.json file is updated every 10 questions
 
 ## Logs Printed During Submission
+
 During the solving of each problem, useful information is printed in the terminal for understanding. Here is the format:
 
 ```
