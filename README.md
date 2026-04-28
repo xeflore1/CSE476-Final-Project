@@ -19,14 +19,11 @@ python3 -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
-
-# Create the env file (this file is git-ignored)
-cat > .env <<'EOF'
-API-KEY=<api-key>
-API_BASE=https://openai.rc.asu.edu/v1
-MODEL_NAME=qwen3-30b-a3b-instruct-2507
-EOF
 ```
+
+## Enter API Key into .env File
+Enter your API key into the API-KEY=... value in the .env file before running the submission.
+
 
 All commands assume you are inside `CSE476-Final-Project/` with the venv active.
 
@@ -58,15 +55,18 @@ confidence_check("answer" -> If medium OR high: submit answer and check for <= 5
 
 If Tools Needed: Primary Technique -> Uses /tools/calculator or tools/code_executor
 
+## IMPORTANT: Chain of Thought is the Second Default Method for All Domains Due to its Effectiveness. That is why you might see it more frequently than other techniques.
+## However, Other Techniques will still be Run Throughout the Submission
 
-## Primary Technique Mapping
+
+# Primary Technique Mapping
 'math': 'chain_of_thought'  
 'coding': 'tool_augmented'  
 'common_sense': 'chain_of_thought'  
 'planning': 'tree_of_thought'  
 'future_prediction': 'self_refine'  
 
-## File Structure:
+# File Structure:
 /techniques  
 &nbsp;&nbsp;chain_of_thought.py  
 &nbsp;&nbsp;self_consistency.py  
@@ -98,7 +98,13 @@ cse_476_final_project_test_data.json  - 6,208 unlabelled test rows
 cse_476_final_project_answers.json    - generated submission  
 
 
-### Final File Format
+# Final Output Submission
+
+## IMPORTANT: The File that will contain the Output will be called: "cse_476_final_answers.json". The File with the Suffix will contain the Answers when you run the Submission.
+## The File that Contains the Answers that we Pre-Generated before Submission are in: "cse_476_final_answers_generic.json"
+
+
+## Final File Format
 
 The answers.json should look something like this:
 
@@ -107,7 +113,18 @@ The answers.json should look something like this:
 { "input": "Question", "output": "<answer string under 5000 chars>" }
 ]
 ```
-### Important Note: answers.json file is updated every 10 questions
+## Important Note: answers.json file is updated every 10 questions
+
+## Logs Printed During Submission
+During the solving of each problem, useful information is printed in the terminal for understanding. Here is the format:
+
+```
+==============
+\[Q i/6208\] domain=pending len=size_of_question
+==============
+[TECHNIQUE] technique_name domain=domain_of_question
+...
+```
 
 ## Important Considerations for Project
 
