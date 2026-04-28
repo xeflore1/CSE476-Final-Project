@@ -21,13 +21,13 @@ MODEL    = os.getenv("MODEL_NAME", "qwen3-30b-a3b-instruct-2507")
 DOMAIN_TO_TECHNIQUES = {
     "math": ["chain_of_thought", "decomposition", "tool_augmented"],
     "common_sense": ["chain_of_thought", "self_refine", "self_consistency"],
-    "coding": ["react_agent", "chain_of_thought", "self_refine"],
+    "coding": ["react", "chain_of_thought", "self_refine"],
     "future_prediction": ["chain_of_thought", "self_consistency", "self_consistency"],
     "planning": ["decomposition", "chain_of_thought", "tree_of_thought"]
 }
 
 techniques_call_cost = {
-    "chain_of_thought": 1, "tool_augmented": 2, "self_refine": 3, "react_agent": 3, "self_consistency": 4, "tree_of_thought": 4, "decomposition": 5
+    "chain_of_thought": 1, "tool_augmented": 2, "self_refine": 3, "react": 3, "self_consistency": 4, "tree_of_thought": 4, "decomposition": 5
 }
 
 def plan_for_budget(domain: str, budget: int) -> list[str] | None:
